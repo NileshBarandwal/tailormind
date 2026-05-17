@@ -110,3 +110,33 @@ class TailoredCoverLetter(BaseModel):
     paragraphs: list[str] = Field(default_factory=list)
     closing: str
     generated_at: datetime
+
+
+class JobListing(BaseModel):
+    job_id: str
+    title: str
+    company: str
+    location: str
+    description: str
+    url: str
+    source: str
+    salary_min: float = 0.0
+    salary_max: float = 0.0
+    posted_at: str = ""
+    match_score: float = 0.0
+    match_reason: str = ""
+
+
+class DiscoveredJobs(BaseModel):
+    query: str
+    location: str
+    total_found: int
+    jobs: list[JobListing] = Field(default_factory=list)
+    fetched_at: datetime
+
+
+class InstructionSet(BaseModel):
+    profile_id: str
+    persistent: list[str] = Field(default_factory=list)
+    per_job: dict[str, list[str]] = Field(default_factory=dict)
+    updated_at: datetime

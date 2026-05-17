@@ -15,6 +15,13 @@ from backend.models.schemas import (
     TailoredResume,
     UserProfile,
 )
+from backend.services.pdf_generator import (
+    export_cover_letter_pdf,
+    export_resume_pdf,
+)
+
+
+EXPORT_DIR = PROJECT_ROOT / "data" / "exports"
 
 
 router = APIRouter()
@@ -79,3 +86,25 @@ def generate_cover_letter(request: GenerateCoverLetterRequest) -> TailoredCoverL
     return _cover_letter_generator.generate(
         profile, parsed_jd, research, match, request.instructions
     )
+
+
+@router.post("/export/resume")
+def export_resume(request: GenerateResumeRequest) -> dict[str, str]:
+    profile, parsed_jd, research, match = _prepare_context(request)
+    resume = _resume_generator.generate(
+        profile, parsed_jd, research, match, request.instructions
+    )
+    output_dir = EXPORT_DIR / request.profile_id
+    pdf_path = export_resume_pdf(resume, output_dir)
+    return {"pdf_path": str(pdf_path), "filename": pdf_path.name}
+
+
+@router.post("/export/cover-letter")
+def export_cover_letter(request: GenerateCoverLetterRequest) -> dict[str, str]:
+    profile, parsed_jd, research, match = _prepare_context(request)
+    letter = _cover_letter_generator.generate(
+        profile, parsed_jd, research, match, request.instructions
+    )
+    output_dir = EXPORT_DIR / request.profile_id
+    pdf_path = export_cover_letter_pdf(letter, output_dir)
+    return {"pdf_path": str(pdf_path), "filename": pdf_path.name}

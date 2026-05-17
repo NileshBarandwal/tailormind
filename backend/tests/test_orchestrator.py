@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from backend.models.schemas import (
     CompanyBrief,
     Education,
@@ -93,3 +95,40 @@ def test_pipeline_state_structure(tmp_path):
     assert state["parsed_jd"] is not None
     assert state["research_report"] is not None
     assert state["match_score"] is not None
+
+
+LIVE_JD_TEXT = (
+    "Anthropic is hiring an AI Engineer (Fresher) to join our applied "
+    "AI team. We are looking for recent M.Tech or B.Tech CSE graduates "
+    "with strong fundamentals in Python, deep learning, and modern LLM "
+    "tooling. You will build production AI features using LangChain, "
+    "FastAPI, and PyTorch, deploy models on GPU infrastructure, and "
+    "work directly with founders on customer-facing AI products. "
+    "Required skills: Python, PyTorch, LangChain, FastAPI, SQL, REST "
+    "APIs. Preferred: Docker, vector databases, RAG pipelines, LLM "
+    "fine-tuning. We value engineers who ship fast, learn faster, and "
+    "own outcomes end to end."
+)
+
+
+@pytest.mark.live
+def test_live_full_pipeline():
+    from backend.core.orchestrator import run_pipeline
+
+    state = run_pipeline(
+        jd_text=LIVE_JD_TEXT,
+        company_name="Anthropic",
+        website="https://anthropic.com",
+        profile_id="nbarandwal_gmail_com",
+        instructions="Highlight secure AI systems work",
+    )
+
+    assert state["error"] is None, f"pipeline error: {state['error']}"
+    assert state["parsed_jd"] is not None
+    assert state["research_report"] is not None
+    assert state["match_score"] is not None
+    assert state["tailored_resume"] is not None
+    assert state["tailored_cover_letter"] is not None
+    assert isinstance(state["tailored_resume"].target_role, str)
+    assert state["tailored_resume"].target_role.strip() != ""
+    assert len(state["tailored_cover_letter"].paragraphs) == 3

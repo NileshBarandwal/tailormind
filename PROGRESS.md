@@ -162,3 +162,37 @@
 - Add the instruction-edit endpoint: `POST /api/instructions` for persistent preferences, `POST /api/instructions/per-job` for per-job overrides (project rule #3). Store under `data/instructions/`.
 - Add the export pipeline scaffolding: `POST /api/export/resume` and `POST /api/export/cover-letter` rendering the latest `TailoredResume` / `TailoredCoverLetter` to PDF via WeasyPrint (project rule #4 — user reviews before exporting).
 - Add a live end-to-end orchestrator smoke (marker `live`) that runs `run_pipeline()` against Anthropic and asserts all 5 state fields are populated.
+
+---
+
+## Session 5 - Job Discovery + Instructions + PDF Export
+
+### What was built
+- `models/schemas.py`: added `JobListing`, `DiscoveredJobs`, `InstructionSet`. Existing schemas untouched.
+- `agents/job_discovery.py`: `JobDiscovery.discover(query, location, profile, max_results)` fetches Adzuna (India geo) and Remotive concurrently via `ThreadPoolExecutor`, normalizes both feeds into `JobListing`, deduplicates by `url`, caps to `max_results`, and asks `filter_jobs` (Llama 3.3 70B) to score every listing in one call. Scores are clamped to [0,1] and reasons are stored on the listing; results are sorted by `match_score` descending. Empty fetches short-circuit to an empty `DiscoveredJobs` with no LLM call.
+- `api/routes/jobs.py`: added `POST /api/discover` (`{profile_id, query, location, max_results}` → `DiscoveredJobs`). 404 when the profile is missing.
+- `api/routes/instructions.py`: replaced the placeholder with a full instruction store at `data/instructions/<profile_id>.json` matching the `InstructionSet` schema. Routes: `GET /api/instructions/{profile_id}`, `POST /api/instructions/persistent`, `POST /api/instructions/per-job`, `DELETE /api/instructions/persistent`, `DELETE /api/instructions/per-job`. Adds dedupe on every POST; per-job buckets are keyed by a free-form `job_key`. Every mutation refreshes `updated_at`.
+- `services/pdf_generator.py`: replaced the placeholder. `resume_to_html` / `cover_letter_to_html` render minimal, self-contained HTML (no CDN, no external fonts) with `html.escape` on every user value. `html_to_pdf` uses WeasyPrint. `export_resume_pdf` and `export_cover_letter_pdf` slugify the profile name, add a UTC timestamp to the filename (`resume_<slug>_<YYYYmmdd_HHMMSS>.pdf`), and write into the supplied output dir.
+- `api/routes/generate.py`: added `POST /api/export/resume` and `POST /api/export/cover-letter`. Both reuse `_prepare_context()` from Session 4, run the appropriate generator, then write the PDF under `data/exports/<profile_id>/` and return `{pdf_path, filename}`. Project rule #4 is preserved — exports only happen when the user explicitly hits an export route.
+- Tests added: `test_job_discovery.py` (4 cases), `test_instructions.py` (4 cases using FastAPI `TestClient` against the actual routes with isolated `tmp_path` storage), `test_pdf_generator.py` (3 cases on HTML output, no WeasyPrint invocation). `test_orchestrator.py` gained `test_live_full_pipeline` (marker `live`) that asserts all 6 state fields populate end-to-end against Anthropic.
+- Manual smoke of `POST /api/discover` returned 5 jobs from the live Adzuna + Remotive feeds, top hit scored 0.6 by `filter_jobs`.
+
+### Key decisions and why
+- **Single `filter_jobs` call per discover invocation** rather than one call per listing. Llama 3.3 70B can score 20+ listings in one round-trip with much lower latency and audit-log volume. Failures fall back silently to `match_score=0.0` rather than fail the whole call.
+- **`{"scores": [...]}` envelope on the scoring response** rather than a bare top-level array. Several LiteLLM providers reject `response_format={"type":"json_object"}` when the root isn't a JSON object; wrapping in `scores` lets us keep the format hint on every model call.
+- **Dedupe by URL, not by `(source, job_id)`**. Adzuna and Remotive sometimes echo the same posting from the same upstream ATS; URL is the strongest cross-feed identity signal we have without a normalization map.
+- **Instruction store is a plain JSON file per profile** mirroring how the profile itself is stored. Same persistence layer, same backup story; easy to migrate to Supabase later by swapping the load/save helpers.
+- **Per-job overrides are bucketed under a caller-supplied `job_key`** (the spec leaves this opaque). This lets the eventual UI use a stable key — Adzuna/Remotive `job_id`, or a synthetic `company_slug:role_slug` for hand-entered jobs — without baking a job-id format into this layer.
+- **PDF generation goes through HTML first, never builds PDFs directly.** Keeps the same renderer for an eventual in-browser preview, and lets `resume_to_html` / `cover_letter_to_html` be unit-tested without WeasyPrint's heavy native deps in the test path.
+- **`html.escape` on every interpolated value**, including section titles and bullets that originate from an LLM. Defensive — LLMs occasionally produce angle brackets or ampersands that would break the rendered PDF.
+- **`data/exports/<profile_id>/` namespacing** keeps generated PDFs separated by candidate and out of the way of `data/profiles/` and `data/instructions/`. All of `data/` is already gitignored.
+
+### Issues encountered and how resolved
+- **`test_cover_letter_to_html_contains_paragraphs` initially failed** because the fixture paragraph contained an apostrophe which `html.escape` (correctly) rewrote to `&#x27;`. Updated the fixture to use plain ASCII text; the escaping behavior in production code is the right default and stays unchanged.
+- **No other failures.** Both feeds responded on the discover smoke; the live full-pipeline run took ~89s end-to-end (scrape Anthropic, embed, score, generate resume + cover letter) and asserted all 6 state fields populated.
+
+### Start of Session 6
+- Begin the Next.js 14 frontend scaffold under `frontend/`. Wire up the read paths first: profile view (`GET /api/profile/{id}`), match results view (`POST /api/match` → score breakdown UI), and a discover view that drives `POST /api/discover` and lists ranked jobs.
+- Add a review-and-edit surface for the generated resume and cover letter that calls `POST /api/generate/resume` and `POST /api/generate/cover-letter`, lets the user tweak text inline, and only then triggers `POST /api/export/resume` / `POST /api/export/cover-letter` (project rule #4 — explicit review before export).
+- Wire the instructions panel: list current instructions via `GET /api/instructions/{profile_id}`, add via the two POSTs, remove via the two DELETEs.
+- Backend side: tighten `JobDiscovery` rate-limit handling (Adzuna throttles on the free tier), and add a one-shot integration test that runs `POST /api/export/resume` end-to-end and asserts a PDF actually lands on disk (skip if WeasyPrint isn't importable).
