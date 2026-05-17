@@ -1,5 +1,6 @@
 import type {
   ApplicationCard,
+  CompanyRoles,
   DiscoveredJobs,
   InstructionSet,
   JobListing,
@@ -60,6 +61,21 @@ export function discoverJobs(
       query,
       location,
       max_results: maxResults,
+    }),
+  });
+}
+
+export function discoverCompanyRoles(
+  profileId: string,
+  companyName: string,
+  website: string,
+): Promise<CompanyRoles> {
+  return apiFetch<CompanyRoles>("/discover/company", {
+    method: "POST",
+    body: JSON.stringify({
+      profile_id: profileId,
+      company_name: companyName,
+      website,
     }),
   });
 }

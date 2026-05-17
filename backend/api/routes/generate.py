@@ -78,9 +78,30 @@ def _prepare_context(req) -> tuple:
     try:
         parsed_jd = _jd_parser.parse(req.jd_text)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    research = _company_researcher.research(req.company_name, req.website)
-    match = _profile_matcher.match(profile, parsed_jd)
+        raise HTTPException(
+            status_code=400, detail=f"JD parsing failed: {exc}"
+        )
+    try:
+        research = _company_researcher.research(req.company_name, req.website)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Company research failed: {exc}. "
+                f"The website '{req.website}' could not be scraped. "
+                f"Please verify the URL is correct and publicly accessible."
+            ),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Company research error: {exc}"
+        )
+    try:
+        match = _profile_matcher.match(profile, parsed_jd)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Profile matching failed: {exc}"
+        )
     return profile, parsed_jd, research, match
 
 

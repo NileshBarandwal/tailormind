@@ -136,3 +136,17 @@ export interface SavedApplication {
   saved_at: string;
   updated_at: string;
 }
+
+export interface ExtractedRole {
+  title: string;
+  description: string;
+  url: string;
+  requirements: string[];
+}
+
+export interface CompanyRoles {
+  company_name: string;
+  website: string;
+  roles: ExtractedRole[];
+  scraped_at: string;
+}

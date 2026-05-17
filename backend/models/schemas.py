@@ -172,3 +172,17 @@ class SavedApplication(BaseModel):
     status: str = "draft"
     saved_at: datetime
     updated_at: datetime
+
+
+class ExtractedRole(BaseModel):
+    title: str
+    description: str
+    url: str = ""
+    requirements: list[str] = Field(default_factory=list)
+
+
+class CompanyRoles(BaseModel):
+    company_name: str
+    website: str
+    roles: list[ExtractedRole] = Field(default_factory=list)
+    scraped_at: datetime

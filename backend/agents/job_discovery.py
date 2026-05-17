@@ -68,6 +68,16 @@ class JobDiscovery:
             print(f"[job_discovery] remotive fetch failed: {exc}")
             return []
 
+    def _fetch_wellfound(self, query: str) -> list[dict]:
+        """Wellfound (AngelList) has no public API. Placeholder for a
+        future scraping approach. Returns empty list for now."""
+        return []
+
+    def _fetch_cutshort(self, query: str) -> list[dict]:
+        """Cutshort has no public API. Placeholder for a future scraping
+        approach. Returns empty list for now."""
+        return []
+
     @staticmethod
     def _normalize_adzuna(raw: dict) -> JobListing:
         company = (raw.get("company") or {}).get("display_name", "")
@@ -105,11 +115,15 @@ class JobDiscovery:
         profile: UserProfile,
         max_results: int = 20,
     ) -> DiscoveredJobs:
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        with ThreadPoolExecutor(max_workers=4) as pool:
             adzuna_future = pool.submit(self._fetch_adzuna, query, location)
             remotive_future = pool.submit(self._fetch_remotive, query)
+            wellfound_future = pool.submit(self._fetch_wellfound, query)
+            cutshort_future = pool.submit(self._fetch_cutshort, query)
             adzuna_raw = adzuna_future.result()
             remotive_raw = remotive_future.result()
+            wellfound_future.result()
+            cutshort_future.result()
 
         normalized: list[JobListing] = []
         for raw in adzuna_raw:

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ApplicationCard,
+  CompanyRoles,
   DiscoveredJobs,
+  ExtractedRole,
   JobListing,
   MatchScore,
   SavedApplication,
@@ -13,6 +15,7 @@ import type {
 } from "@/types";
 import {
   deleteApplication,
+  discoverCompanyRoles,
   discoverJobs,
   exportCoverLetter,
   exportResume,
@@ -71,7 +74,7 @@ export default function DashboardPage() {
 
   const [companyName, setCompanyName] = useState("");
   const [website, setWebsite] = useState("");
-  const [websiteAutoFilled, setWebsiteAutoFilled] = useState(false);
+  const [companySearchUrl, setCompanySearchUrl] = useState("");
   const [jobUrl, setJobUrl] = useState("");
   const [instructions, setInstructions] = useState("");
 
@@ -101,6 +104,13 @@ export default function DashboardPage() {
   const [savedApps, setSavedApps] = useState<SavedApplication[]>([]);
   const [savingApp, setSavingApp] = useState(false);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+
+  const [targetOpen, setTargetOpen] = useState(false);
+  const [targetCompany, setTargetCompany] = useState("");
+  const [targetWebsite, setTargetWebsite] = useState("");
+  const [targetLoading, setTargetLoading] = useState(false);
+  const [targetError, setTargetError] = useState("");
+  const [targetRoles, setTargetRoles] = useState<CompanyRoles | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,12 +161,13 @@ export default function DashboardPage() {
   async function selectJob(job: JobListing) {
     setSelectedJob(job);
     setCompanyName(job.company);
-    const slug = job.company
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "")
-      .slice(0, 30);
-    setWebsite(`https://www.${slug}.com`);
-    setWebsiteAutoFilled(true);
+    setWebsite("");
+    const searchQuery = encodeURIComponent(
+      `${job.company} official website careers`,
+    );
+    setCompanySearchUrl(
+      `https://www.google.com/search?q=${searchQuery}`,
+    );
     setJobUrl(job.url);
     setResume(null);
     setCoverLetter(null);
@@ -352,6 +363,44 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleFindCompanyRoles() {
+    const company = targetCompany.trim();
+    const site = targetWebsite.trim();
+    if (!company || !site) return;
+    setTargetLoading(true);
+    setTargetError("");
+    setTargetRoles(null);
+    try {
+      const result = await discoverCompanyRoles(PROFILE_ID, company, site);
+      setTargetRoles(result);
+    } catch (e) {
+      setTargetError(e instanceof Error ? e.message : "Failed to find roles");
+    } finally {
+      setTargetLoading(false);
+    }
+  }
+
+  function selectTargetRole(role: ExtractedRole, index: number) {
+    if (!targetRoles) return;
+    const synthetic: JobListing = {
+      job_id: `direct_${index}`,
+      title: role.title,
+      company: targetRoles.company_name,
+      location: "See posting",
+      description: role.description,
+      url: role.url || targetRoles.website,
+      source: "direct",
+      salary_min: 0,
+      salary_max: 0,
+      posted_at: "",
+      match_score: 0,
+      match_reason: "",
+    };
+    selectJob(synthetic);
+    setWebsite(targetRoles.website);
+    setCompanySearchUrl("");
+  }
+
   const canGenerate = !!selectedJob && !!companyName.trim();
 
   return (
@@ -366,6 +415,109 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500">Loading profile...</p>
         )}
       </header>
+
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setTargetOpen((v) => !v)}
+          className="flex w-full items-center justify-between p-4 text-left"
+        >
+          <h2 className="text-lg font-semibold">Target a company directly</h2>
+          <span className="text-sm text-slate-500">{targetOpen ? "−" : "+"}</span>
+        </button>
+        {targetOpen && (
+          <div className="space-y-3 border-t border-slate-200 p-4">
+            <p className="text-sm text-slate-600">
+              Skip the job boards. Paste any company name and website to scrape
+              their careers page and surface open roles.
+            </p>
+            <div className="grid gap-2 md:grid-cols-[2fr_2fr_auto]">
+              <input
+                type="text"
+                value={targetCompany}
+                onChange={(e) => setTargetCompany(e.target.value)}
+                placeholder="Company name (e.g. Sarvam AI)"
+                className="rounded border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                value={targetWebsite}
+                onChange={(e) => setTargetWebsite(e.target.value)}
+                placeholder="https://www.sarvam.ai"
+                className="rounded border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleFindCompanyRoles}
+                disabled={
+                  targetLoading || !targetCompany.trim() || !targetWebsite.trim()
+                }
+                className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {targetLoading ? "Scraping..." : "Find open roles"}
+              </button>
+            </div>
+
+            {targetError && <p className="text-sm text-red-600">{targetError}</p>}
+            {targetLoading && (
+              <LoadingSpinner message="Scraping careers page..." />
+            )}
+
+            {targetRoles && (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  Found {targetRoles.roles.length} role(s) at{" "}
+                  {targetRoles.company_name}
+                </p>
+                {targetRoles.roles.length === 0 ? (
+                  <p className="text-sm italic text-slate-500">
+                    No open roles detected in the scraped content. The careers
+                    page may use a JS-driven listing — try a different URL.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {targetRoles.roles.map((role, idx) => {
+                      const snippet =
+                        role.description.length > 200
+                          ? `${role.description.slice(0, 200)}...`
+                          : role.description;
+                      return (
+                        <article
+                          key={`${role.title}-${idx}`}
+                          className="rounded-lg border border-slate-200 bg-white p-3"
+                        >
+                          <h3 className="text-sm font-semibold text-slate-900">
+                            {role.title}
+                          </h3>
+                          {snippet && (
+                            <p className="mt-1 text-xs text-slate-700">
+                              {snippet}
+                            </p>
+                          )}
+                          {role.requirements.length > 0 && (
+                            <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs text-slate-600">
+                              {role.requirements.slice(0, 4).map((r, i) => (
+                                <li key={i}>{r}</li>
+                              ))}
+                            </ul>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => selectTargetRole(role, idx)}
+                            className="mt-2 rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                          >
+                            Select this role
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-lg font-semibold">Discover jobs</h2>
@@ -510,15 +662,22 @@ export default function DashboardPage() {
                 value={website}
                 onChange={(e) => {
                   setWebsite(e.target.value);
-                  setWebsiteAutoFilled(false);
+                  if (e.target.value) setCompanySearchUrl("");
                 }}
                 placeholder="https://..."
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
               />
-              {websiteAutoFilled && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Auto-guessed from company name. Please verify or correct
-                  before generating.
+              {companySearchUrl && !website && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Website needed for company research.{" "}
+                  <a
+                    href={companySearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline hover:text-blue-800"
+                  >
+                    Find {companyName} website →
+                  </a>
                 </p>
               )}
             </label>
