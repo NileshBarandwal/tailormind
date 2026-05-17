@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from backend.agents.application_card_generator import ApplicationCardGenerator
 from backend.agents.company_researcher import CompanyResearcher
 from backend.agents.cover_letter_generator import CoverLetterGenerator
 from backend.agents.jd_parser import JDParser
@@ -11,6 +12,7 @@ from backend.agents.profile_matcher import ProfileMatcher
 from backend.agents.resume_generator import ResumeGenerator
 from backend.core.config import PROJECT_ROOT
 from backend.models.schemas import (
+    ApplicationCard,
     TailoredCoverLetter,
     TailoredResume,
     UserProfile,
@@ -35,6 +37,7 @@ _company_researcher = CompanyResearcher()
 _profile_matcher = ProfileMatcher()
 _resume_generator = ResumeGenerator()
 _cover_letter_generator = CoverLetterGenerator()
+_application_card_generator = ApplicationCardGenerator()
 
 
 def _load_profile(profile_id: str) -> UserProfile:
@@ -58,6 +61,15 @@ class GenerateCoverLetterRequest(BaseModel):
     jd_text: str
     company_name: str
     website: str
+    instructions: str = ""
+
+
+class GenerateCardRequest(BaseModel):
+    profile_id: str
+    jd_text: str
+    company_name: str
+    website: str
+    job_url: str = ""
     instructions: str = ""
 
 
@@ -108,3 +120,11 @@ def export_cover_letter(request: GenerateCoverLetterRequest) -> dict[str, str]:
     output_dir = EXPORT_DIR / request.profile_id
     pdf_path = export_cover_letter_pdf(letter, output_dir)
     return {"pdf_path": str(pdf_path), "filename": pdf_path.name}
+
+
+@router.post("/generate/application-card", response_model=ApplicationCard)
+def generate_application_card(request: GenerateCardRequest) -> ApplicationCard:
+    profile, parsed_jd, research, match = _prepare_context(request)
+    return _application_card_generator.generate(
+        profile, parsed_jd, research, match, request.job_url
+    )

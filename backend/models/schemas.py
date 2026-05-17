@@ -140,3 +140,22 @@ class InstructionSet(BaseModel):
     persistent: list[str] = Field(default_factory=list)
     per_job: dict[str, list[str]] = Field(default_factory=dict)
     updated_at: datetime
+
+
+class ApplicationCard(BaseModel):
+    profile_name: str
+    email: str
+    phone: str
+    github_url: str = ""
+    linkedin_url: str = ""
+    target_role: str
+    company_name: str
+    job_url: str = ""
+    one_liner_pitch: str
+    why_this_company: str
+    why_this_role: str
+    top_experiences: list[str] = Field(default_factory=list)
+    key_skills_to_mention: list[str] = Field(default_factory=list)
+    likely_questions: list[dict] = Field(default_factory=list)
+    application_checklist: list[str] = Field(default_factory=list)
+    generated_at: datetime

@@ -196,3 +196,50 @@
 - Add a review-and-edit surface for the generated resume and cover letter that calls `POST /api/generate/resume` and `POST /api/generate/cover-letter`, lets the user tweak text inline, and only then triggers `POST /api/export/resume` / `POST /api/export/cover-letter` (project rule #4 — explicit review before export).
 - Wire the instructions panel: list current instructions via `GET /api/instructions/{profile_id}`, add via the two POSTs, remove via the two DELETEs.
 - Backend side: tighten `JobDiscovery` rate-limit handling (Adzuna throttles on the free tier), and add a one-shot integration test that runs `POST /api/export/resume` end-to-end and asserts a PDF actually lands on disk (skip if WeasyPrint isn't importable).
+
+---
+
+## Session 6 - Application Card Agent + Next.js Frontend
+
+### What was built
+
+**Backend**
+- `models/schemas.py`: added `ApplicationCard` (basic details, two-paragraph pitch fields, 3 top experiences, key skills, 5 likely Q&A pairs, application checklist).
+- `core/model_router.py`: added `application_card -> groq/llama-3.3-70b-versatile`.
+- `agents/application_card_generator.py`: new `ApplicationCardGenerator.generate(profile, jd, research, match, job_url)`. Reuses the same top-N relevance trimming from the cover letter agent (3 experiences, 3 projects scored by JD-skill overlap) so the prompt stays tight. Stamps `profile_name`, `email`, `phone`, `target_role`, `company_name`, `job_url`, `generated_at` server-side; the LLM is only asked for the editorial fields.
+- `api/routes/generate.py`: added `POST /api/generate/application-card` and `_application_card_generator` singleton. Reuses the shared `_prepare_context()` so the upstream chain (profile → parse → research → match) stays identical to the resume/cover-letter routes.
+- `backend/tests/test_application_card.py`: schema test + likely-questions-count test. All 28 mocked tests now pass.
+
+**Frontend (Next.js 14, App Router, Tailwind, TypeScript, no `src/`)**
+- Project scaffolded with `create-next-app@14`.
+- `next.config.mjs`: rewrites `/api/:path*` to `http://localhost:8000/api/:path*` so the browser hits the FastAPI backend without CORS plumbing.
+- `types/index.ts`: TypeScript mirrors of every backend schema (UserProfile, MatchScore, JobListing, DiscoveredJobs, TailoredResume/CoverLetter, ApplicationCard, InstructionSet).
+- `lib/api.ts`: single fetch wrapper (`apiFetch`) plus typed functions for every endpoint we use. Errors bubble up as `Error` with the FastAPI `detail` message.
+- Components: `LoadingSpinner`, `CopyButton` (clipboard + 2s "Copied!" feedback), `MatchScoreCard` (color-graded bars green/yellow/red at 0.7/0.5 thresholds), `JobCard` (source-colored badge, score, snippet, select + apply buttons), `ResumePreview` (sections sorted by `order`, skills highlighted, export button with "Review carefully" note), `CoverLetterPreview`, `ApplicationCardView` (eight sections each with `CopyButton`, expandable Q&A list, client-side checklist), `InstructionPanel` (loads via `getInstructions`, mutations via the four other endpoints, dedupe enforced server-side).
+- Pages: `app/page.tsx` redirects to `/dashboard`. `app/layout.tsx` renders a dark navy header with brand and `NavLinks` (Dashboard/Generate/Instructions, active link highlighted via `usePathname`). `app/dashboard/page.tsx` is the main flow — preset role chips, query/location/maxResults, `/api/discover` results as a 2-col `JobCard` grid, selected-job description panel, generation form, three "Generate" buttons (resume, cover letter, card) each with their own loading state, all three previews rendered side-by-side as they come back, instructions section collapsible at the bottom. `app/generate/page.tsx` mirrors the same generation surface but takes a pasted JD instead of a discovered job. `app/instructions/page.tsx` wraps `InstructionPanel` with a short explainer.
+- Hard-coded `PROFILE_ID = "nbarandwal_gmail_com"` on every page (single-user app for now; real auth is a later session).
+
+**Smoke**
+- `npm run build` clean, zero TypeScript errors (`/dashboard` 3.57 kB, `/generate` 1.37 kB, `/instructions` 1.81 kB).
+- Both servers up: `curl http://localhost:3000` returned HTML (307 `/` → `/dashboard`), `curl http://localhost:3000/api/profile/nbarandwal_gmail_com` returned Nilesh's full profile JSON via the Next.js proxy.
+
+### Key decisions and why
+- **Single-user `PROFILE_ID` constant per page** rather than threading profile_id through routing or context. Real auth doesn't exist yet and we have one candidate; building Zustand/context for a one-key value would be premature plumbing.
+- **`NavLinks` extracted as a client component** but the layout itself stays a server component. `usePathname` requires `"use client"`, but the surrounding layout can stay server-rendered — minimizes the client JS budget.
+- **API proxy via `next.config.mjs` rewrites** rather than calling the backend directly from the browser. No CORS dance, no extra `NEXT_PUBLIC_API_URL` env, and the prod story is the same — put a reverse proxy in front of both apps and `/api/*` keeps working.
+- **`ApplicationCardGenerator` stamps identity fields server-side** (profile name, email, phone, target role, company name, job URL). The LLM is asked for editorial content only, never for facts it could hallucinate. Same pattern as `JDParser.raw_text` / `parsed_at` and `CompanyResearcher.scraped_urls`.
+- **All three generate operations on the dashboard are independent**. Each has its own loading flag, its own error path, and its own result slot. The previews accumulate — generating a card doesn't wipe the resume. Faster iteration when tuning a single output.
+- **`buildJdText` synthesizes a small JD blob** (`title at company\n\n{description}`) from the selected `JobListing` for the dashboard generation flow. The backend's `JDParser` requires at least 50 characters; Adzuna descriptions easily clear that. The `/generate` page accepts raw text directly for full-JD pastes.
+- **`CopyButton` uses `navigator.clipboard.writeText`** (modern API, requires HTTPS in prod but works on localhost). Failures are logged to console rather than thrown — the worst case is the user manually selects and copies, which is what the entire Application Intelligence Card UI optimizes for.
+- **`ApplicationCardView` checklist state is component-local**. The checklist is a "did I do this when filling the form" tracker, not a persisted artifact. Saving it would require schema and a route; not worth it for an ephemeral aid that resets on navigate.
+- **`globals.css` stripped to bare Tailwind directives** — the scaffolded `:root` palette plus `prefers-color-scheme: dark` was overriding our explicit Tailwind backgrounds and producing inverted colors.
+
+### Issues encountered and how resolved
+- **None blocking.** The default `globals.css` (light/dark CSS variables) competed with Tailwind classes; trimmed to the three `@tailwind` lines. `npm run build` was clean on the first run after wiring up the components, and the proxy round-trip worked first try.
+
+### Start of Session 7
+- Wire `MatchScoreCard` into the dashboard alongside the generators — `/api/match` is built, the UI component is built, just not currently used on a page. Show it after generation so the candidate sees the fit signal next to the docs.
+- Add a "saved applications" list backed by a new `data/applications/<profile_id>/` store: when a card is generated, optionally persist `{job, resume, cover_letter, card, generated_at}` so the user can come back to past applications and re-export without paying the LLM cost again.
+- Tighten error UX: the current `genError` is a single shared message; surface per-action errors next to each "Generate" button.
+- Add `POST /api/profile` form on the frontend (the backend route exists from Session 3) so a new candidate can onboard without manually writing the JSON.
+- Backend: add a live test for `POST /api/generate/application-card` against Anthropic to lock in the schema-correctness signal end-to-end.

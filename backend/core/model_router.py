@@ -15,6 +15,7 @@ TASK_MODEL_MAP: dict[str, str] = {
     "generate_resume": "openrouter/deepseek/deepseek-chat",
     "generate_cover_letter": "openrouter/deepseek/deepseek-chat",
     "filter_jobs": "groq/llama-3.3-70b-versatile",
+    "application_card": "groq/llama-3.3-70b-versatile",
 }
 
 
