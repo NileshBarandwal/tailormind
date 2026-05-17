@@ -1,0 +1,160 @@
+{
+  "full_name": "Nilesh Rohidas Barandwal",
+  "email": "nbarandwal@gmail.com",
+  "phone": "7620202306",
+  "summary": "M.Tech CSE final year at IIT Dharwad (CGPA 8.11). Research focus: post-quantum cryptography applied to zkML systems, specifically replacing KZG commitments with FRI-Poseidon in the Artemis framework. Production experience shipping agentic AI systems, full stack web applications, and DeFi smart contracts.",
+  "skills": [
+    "Python",
+    "FastAPI",
+    "Node.js",
+    "React",
+    "Next.js",
+    "LangChain",
+    "SQL",
+    "Docker",
+    "Git",
+    "Solidity",
+    "TypeScript"
+  ],
+  "experiences": [
+    {
+      "company": "Avegen India",
+      "role": "Web Application Developer",
+      "duration": "Aug 2021 - Apr 2022",
+      "description": [
+        "Built REST APIs",
+        "Optimized data pipelines",
+        "Agile delivery of digital health products"
+      ],
+      "tech_used": [
+        "Node.js",
+        "REST APIs",
+        "JIRA",
+        "SQL"
+      ]
+    },
+    {
+      "company": "IMATMI USA",
+      "role": "Full Stack Developer Intern",
+      "duration": "Aug 2020 - Jan 2021",
+      "description": [
+        "Built React UI modules",
+        "Developed Node.js backend APIs",
+        "Deployed full stack apps on cloud servers"
+      ],
+      "tech_used": [
+        "React.js",
+        "Node.js",
+        "Express.js"
+      ]
+    },
+    {
+      "company": "IIT Bombay E-Yantra",
+      "role": "Summer Intern",
+      "duration": "May 2020 - Jun 2020",
+      "description": [
+        "Developed Rakshak App",
+        "Integrated Google Maps API",
+        "Built REST APIs for data exchange"
+      ],
+      "tech_used": [
+        "React.js",
+        "Google Maps API",
+        "REST APIs"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Post-Quantum Security for Artemis zkML",
+      "description": "M.Tech thesis: replaced KZG polynomial commitments with FRI-Poseidon in the Artemis zkML framework to eliminate quantum vulnerability from Shor's algorithm",
+      "tech_used": [
+        "Python",
+        "Solidity",
+        "ZKP",
+        "FRI",
+        "Poseidon Hash",
+        "Qiskit",
+        "BSGS",
+        "CP-SNARK",
+        "Blockchain"
+      ],
+      "highlights": [
+        "Identified KZG quantum vulnerability: Shor's algorithm recovers secret trapdoor in 10.9 hours on 64-bit curve",
+        "Demonstrated attack using BSGS recovering trapdoor in 52 microseconds (9-bit) to 10.9 hours (64-bit) on real MLP weights",
+        "Simulated Shor's algorithm using Qiskit Aer (24 qubits, 4096 shots) confirming quantum threat end-to-end",
+        "Replaced KZG with FRI-Poseidon across all 7 Artemis CP-SNARK commitment operations",
+        "Reduced commitment size from 64 bytes (ECC point) to 8 bytes (Merkle root), no trusted setup required"
+      ],
+      "url": ""
+    },
+    {
+      "name": "Bolna Voice AI Lead Qualifier",
+      "description": "Agentic voice system for autonomous outbound sales calls",
+      "tech_used": [
+        "Next.js",
+        "Express",
+        "SQLite",
+        "Bolna AI"
+      ],
+      "highlights": [
+        "Multi-turn AI conversation",
+        "Real-time webhook processing",
+        "Live dashboard"
+      ],
+      "url": "https://bolna-lead-qualifier.vercel.app"
+    },
+    {
+      "name": "AMM-DEX",
+      "description": "Constant-product AMM with LP tokens on Sepolia testnet",
+      "tech_used": [
+        "Solidity",
+        "Hardhat",
+        "React",
+        "Ethers.js"
+      ],
+      "highlights": [
+        "x*y=k formula",
+        "0.3% fee accrual",
+        "Slippage protection"
+      ],
+      "url": "https://amm-dex-orcin.vercel.app"
+    }
+  ],
+  "education": [
+    {
+      "institution": "IIT Dharwad",
+      "degree": "M.Tech",
+      "field": "Computer Science and Engineering",
+      "year": 2026,
+      "cgpa": 8.11
+    },
+    {
+      "institution": "Pune Institute of Computer Technology",
+      "degree": "B.E.",
+      "field": "Computer Science",
+      "year": 2021,
+      "cgpa": 7.99
+    }
+  ],
+  "certifications": [],
+  "achievements": [
+    "e-YIC IIT Bombay Regional Finalist - top 49 teams of 300+",
+    "e-YRC Robotics Challenge - top 25 teams in India"
+  ],
+  "preferences": {
+    "target_roles": [
+      "AI Engineer",
+      "Backend Engineer",
+      "Full Stack Engineer"
+    ],
+    "preferred_locations": [
+      "Bangalore",
+      "Pune",
+      "Remote"
+    ],
+    "notice_period": "immediate"
+  },
+  "created_at": "2026-05-17T00:00:00Z",
+  "updated_at": "2026-05-17T12:00:00Z"
+}
