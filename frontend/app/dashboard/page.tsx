@@ -489,6 +489,24 @@ export default function DashboardPage() {
                           <h3 className="text-sm font-semibold text-slate-900">
                             {role.title}
                           </h3>
+                          {role.match_score > 0 && (
+                            <span
+                              className={`inline-block rounded px-2 py-0.5 text-xs font-bold mt-1 ${
+                                role.match_score >= 0.7
+                                  ? "bg-green-100 text-green-800"
+                                  : role.match_score >= 0.5
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {Math.round(role.match_score * 100)}% match
+                            </span>
+                          )}
+                          {role.match_reason && (
+                            <p className="text-xs text-slate-500 mt-0.5 italic">
+                              {role.match_reason}
+                            </p>
+                          )}
                           {snippet && (
                             <p className="mt-1 text-xs text-slate-700">
                               {snippet}

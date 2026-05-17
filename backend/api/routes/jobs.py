@@ -139,6 +139,42 @@ def discover_company_roles(request: CompanyTargetRequest) -> CompanyRoles:
     except Exception as exc:
         print(f"[discover_company] role extraction failed: {exc}")
 
+    if roles:
+        try:
+            profile_path = PROFILE_DIR / f"{request.profile_id}.json"
+            if profile_path.exists():
+                from backend.agents.jd_parser import JDParser as _JDP
+                from backend.agents.profile_matcher import ProfileMatcher as _PM
+                from backend.models.schemas import UserProfile as _UP
+
+                _profile = _UP(**json.loads(
+                    profile_path.read_text(encoding="utf-8")))
+                _jdp = _JDP()
+                _pm = _PM()
+
+                for role in roles:
+                    try:
+                        reqs = (
+                            "\n\nRequirements: " + ", ".join(role.requirements)
+                            if role.requirements else ""
+                        )
+                        jd_text = (
+                            f"{role.title} at {request.company_name}"
+                            f"\n\n{role.description}{reqs}"
+                        )
+                        parsed = _jdp.parse(jd_text)
+                        score = _pm.match(_profile, parsed)
+                        role.match_score = round(score.overall_score, 2)
+                        role.match_reason = score.rationale[:120]
+                    except Exception as exc:
+                        print(f"[discover_company] score failed for "
+                              f"'{role.title}': {exc}")
+                        role.match_score = 0.0
+
+                roles.sort(key=lambda r: r.match_score, reverse=True)
+        except Exception as exc:
+            print(f"[discover_company] scoring block failed: {exc}")
+
     return CompanyRoles(
         company_name=request.company_name,
         website=request.website,

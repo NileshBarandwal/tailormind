@@ -179,6 +179,8 @@ class ExtractedRole(BaseModel):
     description: str
     url: str = ""
     requirements: list[str] = Field(default_factory=list)
+    match_score: float = 0.0
+    match_reason: str = ""
 
 
 class CompanyRoles(BaseModel):

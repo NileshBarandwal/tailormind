@@ -142,6 +142,8 @@ export interface ExtractedRole {
   description: string;
   url: string;
   requirements: string[];
+  match_score: number;
+  match_reason: string;
 }
 
 export interface CompanyRoles {
