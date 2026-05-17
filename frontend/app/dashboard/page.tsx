@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   ApplicationCard,
   DiscoveredJobs,
   JobListing,
+  MatchScore,
+  SavedApplication,
   TailoredCoverLetter,
   TailoredResume,
   UserProfile,
 } from "@/types";
 import {
+  deleteApplication,
   discoverJobs,
   exportCoverLetter,
   exportResume,
@@ -17,12 +20,16 @@ import {
   generateCoverLetter,
   generateResume,
   getProfile,
+  listApplications,
+  matchProfile,
+  saveApplication,
 } from "@/lib/api";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
 import InstructionPanel from "@/components/InstructionPanel";
 import JobCard from "@/components/JobCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import MatchScoreCard from "@/components/MatchScoreCard";
 import ResumePreview from "@/components/ResumePreview";
 
 const PROFILE_ID = "nbarandwal_gmail_com";
@@ -41,6 +48,13 @@ const ROLE_PRESETS = [
   "Smart Contract",
   "Developer Relations",
 ];
+
+const STATUS_BADGE: Record<string, string> = {
+  draft: "bg-slate-200 text-slate-800",
+  applied: "bg-blue-100 text-blue-800",
+  interview: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+};
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -63,18 +77,27 @@ export default function DashboardPage() {
   const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
   const [card, setCard] = useState<ApplicationCard | null>(null);
+  const [matchScore, setMatchScore] = useState<MatchScore | null>(null);
 
   const [resumeLoading, setResumeLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
-  const [genError, setGenError] = useState("");
+
+  const [resumeError, setResumeError] = useState("");
+  const [coverLetterError, setCoverLetterError] = useState("");
+  const [cardError, setCardError] = useState("");
 
   const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
   const [resumeExportMsg, setResumeExportMsg] = useState<string>();
   const [letterExportMsg, setLetterExportMsg] = useState<string>();
 
+  const [matchOpen, setMatchOpen] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+
+  const [savedApps, setSavedApps] = useState<SavedApplication[]>([]);
+  const [savingApp, setSavingApp] = useState(false);
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,15 +115,53 @@ export default function DashboardPage() {
     };
   }, []);
 
-  function selectJob(job: JobListing) {
+  const loadSavedApps = useCallback(async () => {
+    try {
+      const apps = await listApplications(PROFILE_ID);
+      setSavedApps(apps);
+    } catch (e) {
+      console.error("Failed to load saved applications:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSavedApps();
+  }, [loadSavedApps]);
+
+  function buildJdText(job: JobListing | null = selectedJob): string {
+    if (!job) return "";
+    return `${job.title} at ${job.company}\n\n${job.description}`;
+  }
+
+  async function selectJob(job: JobListing) {
     setSelectedJob(job);
     setCompanyName(job.company);
     setJobUrl(job.url);
     setResume(null);
     setCoverLetter(null);
     setCard(null);
+    setMatchScore(null);
     setResumeExportMsg(undefined);
     setLetterExportMsg(undefined);
+    setResumeError("");
+    setCoverLetterError("");
+    setCardError("");
+    try {
+      const score = await matchProfile(PROFILE_ID, buildJdText(job));
+      setMatchScore(score);
+    } catch (e) {
+      console.error("Match failed:", e);
+    }
+  }
+
+  async function refreshMatchScore() {
+    if (!selectedJob) return;
+    try {
+      const score = await matchProfile(PROFILE_ID, buildJdText());
+      setMatchScore(score);
+    } catch (e) {
+      console.error("Match refresh failed:", e);
+    }
   }
 
   async function handleDiscover() {
@@ -118,15 +179,10 @@ export default function DashboardPage() {
     }
   }
 
-  function buildJdText(): string {
-    if (!selectedJob) return "";
-    return `${selectedJob.title} at ${selectedJob.company}\n\n${selectedJob.description}`;
-  }
-
   async function handleGenerateResume() {
     if (!selectedJob) return;
     setResumeLoading(true);
-    setGenError("");
+    setResumeError("");
     try {
       const r = await generateResume(
         PROFILE_ID,
@@ -136,8 +192,9 @@ export default function DashboardPage() {
         instructions,
       );
       setResume(r);
+      refreshMatchScore();
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : "Generation failed");
+      setResumeError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setResumeLoading(false);
     }
@@ -146,7 +203,7 @@ export default function DashboardPage() {
   async function handleGenerateCoverLetter() {
     if (!selectedJob) return;
     setLetterLoading(true);
-    setGenError("");
+    setCoverLetterError("");
     try {
       const l = await generateCoverLetter(
         PROFILE_ID,
@@ -156,8 +213,9 @@ export default function DashboardPage() {
         instructions,
       );
       setCoverLetter(l);
+      refreshMatchScore();
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : "Generation failed");
+      setCoverLetterError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setLetterLoading(false);
     }
@@ -166,7 +224,7 @@ export default function DashboardPage() {
   async function handleGenerateCard() {
     if (!selectedJob) return;
     setCardLoading(true);
-    setGenError("");
+    setCardError("");
     try {
       const c = await generateApplicationCard(
         PROFILE_ID,
@@ -177,8 +235,9 @@ export default function DashboardPage() {
         instructions,
       );
       setCard(c);
+      refreshMatchScore();
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : "Generation failed");
+      setCardError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setCardLoading(false);
     }
@@ -219,6 +278,29 @@ export default function DashboardPage() {
       setLetterExportMsg(e instanceof Error ? e.message : "Export failed");
     } finally {
       setExportingLetter(false);
+    }
+  }
+
+  async function handleSaveApplication() {
+    if (!selectedJob) return;
+    setSavingApp(true);
+    try {
+      await saveApplication(PROFILE_ID, selectedJob);
+      await loadSavedApps();
+    } catch (e) {
+      console.error("Save failed:", e);
+    } finally {
+      setSavingApp(false);
+    }
+  }
+
+  async function handleDeleteApp(appId: string) {
+    try {
+      await deleteApplication(PROFILE_ID, appId);
+      await loadSavedApps();
+      if (expandedAppId === appId) setExpandedAppId(null);
+    } catch (e) {
+      console.error("Delete failed:", e);
     }
   }
 
@@ -314,9 +396,19 @@ export default function DashboardPage() {
 
         {selectedJob && (
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <h3 className="text-base font-semibold text-blue-900">
-              {selectedJob.title} at {selectedJob.company}
-            </h3>
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-base font-semibold text-blue-900">
+                {selectedJob.title} at {selectedJob.company}
+              </h3>
+              <button
+                type="button"
+                onClick={handleSaveApplication}
+                disabled={savingApp}
+                className="rounded bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+              >
+                {savingApp ? "Saving..." : "Save this application"}
+              </button>
+            </div>
             <p className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap text-sm text-slate-800">
               {selectedJob.description}
             </p>
@@ -368,34 +460,61 @@ export default function DashboardPage() {
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handleGenerateResume}
-              disabled={!canGenerate || resumeLoading}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {resumeLoading ? "Generating..." : "Generate Resume"}
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateCoverLetter}
-              disabled={!canGenerate || letterLoading}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {letterLoading ? "Generating..." : "Generate Cover Letter"}
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateCard}
-              disabled={!canGenerate || cardLoading}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {cardLoading ? "Generating..." : "Generate Card"}
-            </button>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={handleGenerateResume}
+                disabled={!canGenerate || resumeLoading}
+                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {resumeLoading ? "Generating..." : "Generate Resume"}
+              </button>
+              {resumeError && <p className="text-xs text-red-600">{resumeError}</p>}
+            </div>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={handleGenerateCoverLetter}
+                disabled={!canGenerate || letterLoading}
+                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {letterLoading ? "Generating..." : "Generate Cover Letter"}
+              </button>
+              {coverLetterError && (
+                <p className="text-xs text-red-600">{coverLetterError}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={handleGenerateCard}
+                disabled={!canGenerate || cardLoading}
+                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {cardLoading ? "Generating..." : "Generate Card"}
+              </button>
+              {cardError && <p className="text-xs text-red-600">{cardError}</p>}
+            </div>
           </div>
 
-          {genError && <p className="text-sm text-red-600">{genError}</p>}
+          {matchScore && (
+            <div className="rounded-lg border border-slate-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setMatchOpen((v) => !v)}
+                className="flex w-full items-center justify-between p-3 text-left"
+              >
+                <h3 className="text-base font-semibold">Match Analysis</h3>
+                <span className="text-sm text-slate-500">{matchOpen ? "−" : "+"}</span>
+              </button>
+              {matchOpen && (
+                <div className="border-t border-slate-200 p-3">
+                  <MatchScoreCard score={matchScore} />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             {resume && (
@@ -424,6 +543,84 @@ export default function DashboardPage() {
           )}
         </section>
       )}
+
+      <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold">Saved applications</h2>
+        {savedApps.length === 0 ? (
+          <p className="text-sm italic text-slate-500">No saved applications yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {savedApps.map((app) => {
+              const badge = STATUS_BADGE[app.status] ?? STATUS_BADGE.draft;
+              const expanded = expandedAppId === app.id;
+              return (
+                <li key={app.id} className="rounded border border-slate-200">
+                  <div className="flex items-center justify-between gap-3 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {app.job.title}
+                      </p>
+                      <p className="truncate text-xs text-slate-600">
+                        {app.job.company} ·{" "}
+                        {new Date(app.saved_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${badge}`}
+                      >
+                        {app.status}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAppId(expanded ? null : app.id)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                      >
+                        {expanded ? "Hide" : "View"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteApp(app.id)}
+                        className="rounded px-2 py-1 text-xs text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {expanded && (
+                    <div className="space-y-2 border-t border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <p>
+                        <span className="font-medium text-slate-700">Location:</span>{" "}
+                        {app.job.location || "—"}
+                      </p>
+                      <p>
+                        <span className="font-medium text-slate-700">URL:</span>{" "}
+                        <a
+                          href={app.job.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {app.job.url}
+                        </a>
+                      </p>
+                      <p className="whitespace-pre-wrap text-slate-800">
+                        {app.job.description}
+                      </p>
+                      {app.notes && (
+                        <p>
+                          <span className="font-medium text-slate-700">Notes:</span>{" "}
+                          {app.notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white">
         <button

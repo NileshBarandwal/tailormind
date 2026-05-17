@@ -1,8 +1,15 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from backend.agents.application_card_generator import ApplicationCardGenerator
+from backend.agents.company_researcher import CompanyResearcher
+from backend.agents.jd_parser import JDParser
+from backend.agents.profile_matcher import ProfileMatcher
+from backend.core.config import PROJECT_ROOT
 from backend.models.schemas import (
     ApplicationCard,
     CompanyBrief,
@@ -157,3 +164,44 @@ def test_likely_questions_count():
         _sample_match(),
     )
     assert len(result.likely_questions) == 5
+
+
+LIVE_JD_TEXT = (
+    "Anthropic is hiring an AI Engineer (Fresher) to join our applied "
+    "AI team. We are looking for recent M.Tech or B.Tech CSE graduates "
+    "with strong fundamentals in Python, deep learning, and modern LLM "
+    "tooling. You will build production AI features using LangChain, "
+    "FastAPI, and PyTorch, deploy models on GPU infrastructure, and "
+    "work directly with founders on customer-facing AI products. "
+    "Required skills: Python, PyTorch, LangChain, FastAPI, SQL, REST "
+    "APIs. Preferred: Docker, vector databases, RAG pipelines, LLM "
+    "fine-tuning."
+)
+
+
+@pytest.mark.live
+def test_live_generate_application_card():
+    from backend.models.schemas import UserProfile
+
+    profile_path = (
+        PROJECT_ROOT / "data" / "profiles" / "nbarandwal_gmail_com.json"
+    )
+    profile = UserProfile(**json.loads(profile_path.read_text(encoding="utf-8")))
+
+    parsed_jd = JDParser().parse(LIVE_JD_TEXT)
+    research = CompanyResearcher().research("Anthropic", "https://anthropic.com")
+    match = ProfileMatcher().match(profile, parsed_jd)
+    result = ApplicationCardGenerator().generate(
+        profile,
+        parsed_jd,
+        research,
+        match,
+        job_url="https://anthropic.com/careers",
+    )
+
+    assert isinstance(result.one_liner_pitch, str) and result.one_liner_pitch.strip()
+    assert isinstance(result.why_this_company, str) and result.why_this_company.strip()
+    assert len(result.likely_questions) == 5
+    for entry in result.likely_questions:
+        assert "question" in entry and "answer" in entry
+    assert result.email == "nbarandwal@gmail.com"

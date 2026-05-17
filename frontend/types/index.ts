@@ -123,3 +123,16 @@ export interface InstructionSet {
   per_job: Record<string, string[]>;
   updated_at: string;
 }
+
+export interface SavedApplication {
+  id: string;
+  profile_id: string;
+  job: JobListing;
+  resume?: TailoredResume;
+  cover_letter?: TailoredCoverLetter;
+  card?: ApplicationCard;
+  notes: string;
+  status: string;
+  saved_at: string;
+  updated_at: string;
+}

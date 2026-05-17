@@ -16,3 +16,4 @@ weasyprint
 pytest
 pytest-asyncio
 httpx
+gunicorn

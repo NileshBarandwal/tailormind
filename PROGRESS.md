@@ -243,3 +243,49 @@
 - Tighten error UX: the current `genError` is a single shared message; surface per-action errors next to each "Generate" button.
 - Add `POST /api/profile` form on the frontend (the backend route exists from Session 3) so a new candidate can onboard without manually writing the JSON.
 - Backend: add a live test for `POST /api/generate/application-card` against Anthropic to lock in the schema-correctness signal end-to-end.
+
+---
+
+## Session 7 - Polish + Saved Applications + Deployment
+
+### What was built
+
+**Backend**
+- `models/schemas.py`: added `SavedApplication` (id, profile_id, embedded `JobListing`, optional `resume`/`cover_letter`/`card`, notes, status, timestamps).
+- `api/routes/applications_store.py`: new file-backed store at `data/applications/<profile_id>/<id>.json`. Five endpoints — `POST /api/applications`, `GET /api/applications/{profile_id}`, `GET /api/applications/{profile_id}/{app_id}`, `PATCH /api/applications/{profile_id}/{app_id}` (uses `model_dump(exclude_unset=True)` to apply only provided fields), `DELETE /api/applications/{profile_id}/{app_id}`. IDs are 8-char `uuid4().hex` slices.
+- `api/main.py`: registered the new router under tag `applications`; `/health` now reports `{status, version, agents[7], endpoints: 16}`.
+- `backend/tests/test_application_card.py`: added `test_live_generate_application_card` (real Anthropic crawl + match + card) asserting non-empty pitch/why-this-company, exactly 5 questions each with `question`/`answer` keys, and email stamping. **Passed live.**
+
+**Frontend**
+- `types/index.ts`: added `SavedApplication`.
+- `lib/api.ts`: added `matchProfile`, `saveProfile`, and the five `*Application` helpers.
+- `app/dashboard/page.tsx`: rewritten. `selectJob()` now calls `/api/match` immediately and surfaces the result through a collapsed-by-default `MatchScoreCard` ("Match Analysis" panel). Each generator action has its own error state (`resumeError` / `coverLetterError` / `cardError`) rendered inline under the button. New "Saved applications" section lists items newest-first with status badges (draft/applied/interview/rejected), an inline expand for job details, save and delete actions. `refreshMatchScore()` re-queries the match after any successful generation so the score reflects the latest context.
+- `app/generate/page.tsx`: same per-action error UX as the dashboard.
+- `app/profile/page.tsx`: new onboarding page. Loads the current profile, exposes editable fields for name/email/phone/summary/skills (skills are a tag input — Enter to add, × to remove). `Save Profile` POSTs the merged profile (preserving experiences/projects/education/etc. as-is) and refreshes `updated_at` client-side.
+- `app/NavLinks.tsx`: added a `/profile` link between Generate and Instructions.
+
+**Deployment + docs**
+- `backend/Procfile` and `backend/railway.toml` (nixpacks build, `uvicorn ... --port $PORT`, `/health` 30s timeout).
+- `backend/requirements.txt`: appended `gunicorn`.
+- `frontend/next.config.mjs`: rewrites `/api/:path*` to `${NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*` so the same code runs locally and in production by flipping one env var.
+- `frontend/.env.example` and `frontend/vercel.json` (rewrites pointing at a placeholder that the operator updates after deploying the backend).
+- `README.md`: complete rewrite covering problem, capabilities, architecture, local setup, API keys, project structure, and a resume line.
+
+### Key decisions and why
+- **Saved applications are flat-file JSON, not Supabase**. Same persistence model as profiles and instructions, keeps the local-first story coherent, and avoids forcing every contributor to provision a database before they can run the app. Easy to swap behind the helper functions later.
+- **`PATCH` accepts every mutable field instead of separate endpoints per attribute**. The status flow (draft → applied → interview → rejected) and the optional generated artifacts (`resume` / `cover_letter` / `card`) all live on the same record; one route with `exclude_unset=True` semantics is simpler than four endpoints with overlapping validation.
+- **`matchProfile` is called automatically on job select** rather than gated behind a "score this match" button. The match call is cheap (single Groq round-trip, no scraping) and immediately answers the candidate's first question — "is this worth my time?" — before they decide to generate.
+- **`MatchScoreCard` defaults to collapsed**. The fit number is useful, but the candidate's eyes belong on the generated documents. A one-click expand keeps the analysis available without crowding the primary surface.
+- **Profile form only edits the top-level scalar fields**. Experiences, projects, and education are nested arrays with their own internal structure; a CRUD UI for them is a meaningful build of its own (drag-to-reorder, per-row validation, etc.) and outside this session's scope. The form preserves them via spread on save.
+- **`NEXT_PUBLIC_API_URL` drives both the Next.js dev rewrite and the Vercel `vercel.json` rewrite**. Same conceptual seam in dev and prod — no `if (process.env.NODE_ENV === ...)` branching in code.
+- **Health endpoint counts endpoints (16) rather than enumerating them**. Mirrors how operators actually use a health check (cheap liveness probe) without making it a brittle spec mirror that drifts on every route change.
+
+### Issues encountered and how resolved
+- **None blocking.** Backend mocked tests stayed green (28/28) through the entire session. The live `ApplicationCard` test passed first run against Anthropic. Frontend build went from 4 routes to 5 (added `/profile`) with zero TypeScript errors.
+
+### Final project status
+- **Backend**: 7 agents, 16 API endpoints (counting the 5 new application-store routes), 5-node LangGraph orchestrator, ChromaDB with SHA-256 verification, AuditLogger to file + Supabase, WeasyPrint PDF export. 28 mocked + 4 live tests all passing.
+- **Frontend**: Next.js 14 / TypeScript / Tailwind. Dashboard (discovery + generation + match analysis + saved apps + instructions), Generate page (manual JD), Profile page (onboarding), Instructions page. Single Next.js proxy seam to the backend that works locally and on Vercel.
+- **Deployment**: Railway-ready backend (`Procfile`, `railway.toml`, gunicorn), Vercel-ready frontend (`vercel.json`, env-var-driven rewrites).
+- **Docs**: README covers the full story end-to-end. PROGRESS.md is the decision log for every session.
+- **Git**: clean per-session commits authored as `Nilesh Rohidas Barandwal <nbarandwal@gmail.com>`, all pushed to `github.com/NileshBarandwal/tailormind`.

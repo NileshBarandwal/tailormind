@@ -2,6 +2,9 @@ import type {
   ApplicationCard,
   DiscoveredJobs,
   InstructionSet,
+  JobListing,
+  MatchScore,
+  SavedApplication,
   TailoredCoverLetter,
   TailoredResume,
   UserProfile,
@@ -23,6 +26,25 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export function getProfile(id: string): Promise<UserProfile> {
   return apiFetch<UserProfile>(`/profile/${id}`);
+}
+
+export function saveProfile(
+  profile: UserProfile,
+): Promise<{ status: string; profile_id: string }> {
+  return apiFetch("/profile", {
+    method: "POST",
+    body: JSON.stringify(profile),
+  });
+}
+
+export function matchProfile(
+  profileId: string,
+  jdText: string,
+): Promise<MatchScore> {
+  return apiFetch<MatchScore>("/match", {
+    method: "POST",
+    body: JSON.stringify({ profile_id: profileId, jd_text: jdText }),
+  });
 }
 
 export function discoverJobs(
@@ -182,5 +204,47 @@ export function removePerJobInstruction(
   return apiFetch<InstructionSet>("/instructions/per-job", {
     method: "DELETE",
     body: JSON.stringify({ profile_id: profileId, job_key: jobKey, instruction }),
+  });
+}
+
+export function saveApplication(
+  profileId: string,
+  job: JobListing,
+  notes: string = "",
+): Promise<SavedApplication> {
+  return apiFetch<SavedApplication>("/applications", {
+    method: "POST",
+    body: JSON.stringify({ profile_id: profileId, job, notes }),
+  });
+}
+
+export function listApplications(profileId: string): Promise<SavedApplication[]> {
+  return apiFetch<SavedApplication[]>(`/applications/${profileId}`);
+}
+
+export function getApplication(
+  profileId: string,
+  appId: string,
+): Promise<SavedApplication> {
+  return apiFetch<SavedApplication>(`/applications/${profileId}/${appId}`);
+}
+
+export function updateApplication(
+  profileId: string,
+  appId: string,
+  updates: Partial<SavedApplication>,
+): Promise<SavedApplication> {
+  return apiFetch<SavedApplication>(`/applications/${profileId}/${appId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export function deleteApplication(
+  profileId: string,
+  appId: string,
+): Promise<{ deleted: string }> {
+  return apiFetch(`/applications/${profileId}/${appId}`, {
+    method: "DELETE",
   });
 }

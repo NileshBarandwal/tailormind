@@ -33,7 +33,9 @@ export default function GeneratePage() {
   const [resumeLoading, setResumeLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [coverLetterError, setCoverLetterError] = useState("");
+  const [cardError, setCardError] = useState("");
 
   const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
@@ -45,13 +47,13 @@ export default function GeneratePage() {
 
   async function handleGenerateResume() {
     setResumeLoading(true);
-    setError("");
+    setResumeError("");
     try {
       setResume(
         await generateResume(PROFILE_ID, jdText, companyName, website, instructions),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
+      setResumeError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setResumeLoading(false);
     }
@@ -59,7 +61,7 @@ export default function GeneratePage() {
 
   async function handleGenerateCoverLetter() {
     setLetterLoading(true);
-    setError("");
+    setCoverLetterError("");
     try {
       setCoverLetter(
         await generateCoverLetter(
@@ -71,7 +73,7 @@ export default function GeneratePage() {
         ),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
+      setCoverLetterError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setLetterLoading(false);
     }
@@ -79,7 +81,7 @@ export default function GeneratePage() {
 
   async function handleGenerateCard() {
     setCardLoading(true);
-    setError("");
+    setCardError("");
     try {
       setCard(
         await generateApplicationCard(
@@ -92,7 +94,7 @@ export default function GeneratePage() {
         ),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
+      setCardError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setCardLoading(false);
     }
@@ -197,34 +199,43 @@ export default function GeneratePage() {
           </label>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleGenerateResume}
-            disabled={!canGenerate || resumeLoading}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {resumeLoading ? "Generating..." : "Generate Resume"}
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerateCoverLetter}
-            disabled={!canGenerate || letterLoading}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {letterLoading ? "Generating..." : "Generate Cover Letter"}
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerateCard}
-            disabled={!canGenerate || cardLoading}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {cardLoading ? "Generating..." : "Generate Application Card"}
-          </button>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={handleGenerateResume}
+              disabled={!canGenerate || resumeLoading}
+              className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {resumeLoading ? "Generating..." : "Generate Resume"}
+            </button>
+            {resumeError && <p className="text-xs text-red-600">{resumeError}</p>}
+          </div>
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={handleGenerateCoverLetter}
+              disabled={!canGenerate || letterLoading}
+              className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {letterLoading ? "Generating..." : "Generate Cover Letter"}
+            </button>
+            {coverLetterError && (
+              <p className="text-xs text-red-600">{coverLetterError}</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={handleGenerateCard}
+              disabled={!canGenerate || cardLoading}
+              className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {cardLoading ? "Generating..." : "Generate Application Card"}
+            </button>
+            {cardError && <p className="text-xs text-red-600">{cardError}</p>}
+          </div>
         </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">

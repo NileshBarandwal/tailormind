@@ -159,3 +159,16 @@ class ApplicationCard(BaseModel):
     likely_questions: list[dict] = Field(default_factory=list)
     application_checklist: list[str] = Field(default_factory=list)
     generated_at: datetime
+
+
+class SavedApplication(BaseModel):
+    id: str
+    profile_id: str
+    job: JobListing
+    resume: TailoredResume | None = None
+    cover_letter: TailoredCoverLetter | None = None
+    card: ApplicationCard | None = None
+    notes: str = ""
+    status: str = "draft"
+    saved_at: datetime
+    updated_at: datetime
