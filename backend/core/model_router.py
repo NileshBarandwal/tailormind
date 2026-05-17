@@ -5,16 +5,20 @@ from typing import Any
 import litellm
 
 from backend.core.config import settings
+from backend.services.audit_logger import AuditLogger
 
 
 TASK_MODEL_MAP: dict[str, str] = {
-    "parse_jd": "groq/qwen-qwq-32b",
+    "parse_jd": "groq/qwen/qwen3-32b",
     "research_company": "gemini/gemini-2.5-pro",
     "match_profile": "groq/llama-3.3-70b-versatile",
     "generate_resume": "openrouter/deepseek/deepseek-chat",
     "generate_cover_letter": "openrouter/deepseek/deepseek-chat",
     "filter_jobs": "groq/llama-3.3-70b-versatile",
 }
+
+
+audit_logger = AuditLogger()
 
 
 class ModelRouter:
@@ -39,11 +43,20 @@ class ModelRouter:
     ) -> str:
         model = self.route(task)
         timestamp = datetime.now(timezone.utc).isoformat()
-        print(f"[model_router] {timestamp} task={task} model={model}")
 
         kwargs: dict[str, Any] = {"model": model, "messages": messages}
         if response_format is not None:
             kwargs["response_format"] = response_format
 
         response = litellm.completion(**kwargs)
-        return response["choices"][0]["message"]["content"]
+        content = response["choices"][0]["message"]["content"]
+
+        audit_logger.log(
+            task=task,
+            model=model,
+            messages=messages,
+            response=content,
+            extra={"called_at": timestamp},
+        )
+
+        return content

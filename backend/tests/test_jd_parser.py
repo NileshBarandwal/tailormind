@@ -121,3 +121,13 @@ def test_preferred_skills_empty():
 
     assert isinstance(parsed.preferred_skills, list)
     assert parsed.preferred_skills == []
+
+
+@pytest.mark.live
+def test_live_parse_jd():
+    parser = JDParser()
+    result = parser.parse(SAMPLE_JD)
+
+    assert isinstance(result.role_title, str) and result.role_title
+    assert isinstance(result.required_skills, list) and len(result.required_skills) > 0
+    assert result.experience_level in ("fresher", "junior", "mid", "senior")

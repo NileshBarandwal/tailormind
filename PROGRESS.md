@@ -61,3 +61,36 @@
 - Wire the audit logger (`services/audit_logger.py`) so every `ModelRouter.call` records `{timestamp, task, model, message hashes, response hash}` to disk or the Supabase `audit_log` table. The logger should be the canonical source for the audit log requirement, not the `print` statement in the router.
 - Begin the company researcher agent: define a `ResearchReport` schema, set up `core/vector_store.py` with a real ChromaDB client, and add SHA-256 verification on retrieved chunks before they are passed to the LLM.
 - Add a real (non-mock) integration smoke test for `JDParser` behind a marker so it can be opt-in (e.g. `pytest -m live`).
+
+---
+
+## Session 2 - Audit Logger + Vector Store + Company Researcher
+
+### What was built
+- `services/audit_logger.py`: `AuditLogger` class. Hashes every message and the response with SHA-256, writes a JSON line to `logs/audit.log`, and best-effort writes a row to Supabase `audit_log` via `psycopg2`. Prints the `CREATE TABLE` DDL once on import so the table can be provisioned manually. Never raises — failures are swallowed with a `[audit_logger]` console message so the main flow is never broken by an audit hiccup.
+- `core/model_router.py`: `print` line removed. `AuditLogger` is instantiated once at module import. Every successful `litellm.completion` is logged with `extra={"called_at": <pre-call UTC ISO timestamp>}`.
+- `core/vector_store.py`: `VectorStore` backed by `chromadb.PersistentClient` at `.chroma/`. `add_chunks` injects `sha256` into each chunk's metadata. `query` recomputes SHA-256 on returned text and raises `ValueError` on mismatch (with both hashes and the chunk id); otherwise tags each result with `verified=True`. `delete_collection` for teardown.
+- `models/schemas.py`: added `CompanyBrief` and `ResearchReport` (existing `ParsedJD` untouched).
+- `agents/company_researcher.py`: `CompanyResearcher.research(company_name, website)`. Scrapes homepage + `/about` + `/careers` with `crawl4ai`, chunks by `\n\n` (≥50 char, capped at 200), stores chunks in `company_<slug>` collection, queries the collection with a fixed seed prompt for 20 verified chunks, and asks `research_company` (Gemini 2.5 Pro) to emit a strict-JSON `CompanyBrief`. `researched_at` and `scraped_urls` are stamped server-side.
+- `backend/tests/test_jd_parser.py`: added `test_live_parse_jd` (real API, marked `@pytest.mark.live`). `pytest.ini` registers the `live` marker so `-m "not live"` is the default workflow.
+
+### Key decisions and why
+- **Audit logger is fail-soft, not fail-loud**: a broken Supabase connection or full disk must never block a model call. All errors are caught and printed. The local `audit.log` is the source of truth; Supabase is a mirror to be enabled once the DDL has been run.
+- **Schema DDL printed on import** rather than executed automatically. Project rule #5 requires an audit log; project rule #4 says the user is always in control. Running DDL silently on import would be too much magic — Nilesh runs the SQL in Supabase once when he's ready.
+- **SHA-256 verification belongs in `VectorStore.query`**, not at each callsite. Project rule #2 says every retrieved chunk must be hash-verified before reaching an LLM. Centralizing this makes the rule unbypassable — any agent that calls `query()` gets verification for free, and a mismatch is a hard fail.
+- **`groq/qwen-qwq-32b` was decommissioned by Groq mid-session**. Live test surfaced this immediately. Probed Groq's catalogue and swapped to `groq/qwen/qwen3-32b` (current Qwen3 generation on Groq) — closest available Qwen, consistent with the original spec instruction.
+- **Scraping is best-effort across three URLs**. Many company sites do not expose `/about` or `/careers` at predictable paths; failures are logged and skipped instead of aborting the whole research. Only fully empty result sets raise.
+- **Chunking by `\n\n` with a 50-char floor and 200-chunk ceiling** keeps Chroma payloads bounded and avoids feeding the LLM trivial fragments (nav menus, single words). This is a deliberately simple chunker — we can swap in a token-aware splitter later if quality demands it.
+- **`asyncio.run` inside the sync `research()` API** so the agent stays sync-callable from the FastAPI route layer (which is currently sync). If we move the API to async, we can drop `asyncio.run` and `await` directly.
+- **Live test marker (`live`)** gates real-API tests so CI / dev iteration stays free; `pytest` default runs the mocked suite, `pytest -m live` runs the real one.
+
+### Issues encountered and how resolved
+- **Groq deprecation of `qwen-qwq-32b`**: probed live model list, switched to `groq/qwen/qwen3-32b`, re-ran live test — green.
+- **ChromaDB embedding model download on first use**: ~80 MB ONNX pull. Expected; one-time per machine and cached under `~/.cache/chroma/`. The smoke test still completed and round-tripped correctly.
+- **LiteLLM startup warnings about missing `botocore`** continue (Bedrock + SageMaker pre-load). Harmless — we use neither provider.
+
+### Start of Session 3
+- Stand up the profile matcher agent: define a `MatchScore` schema (overall score, dimension scores, rationale), build `agents/profile_matcher.py` to compare a `UserProfile` against a `ParsedJD` via the `match_profile` task.
+- Define a `UserProfile` schema and a profile-ingest endpoint (`POST /api/profile`) so we have real input for the matcher.
+- Add a live smoke test for `CompanyResearcher` against a small known site (marker `live`).
+- Once the matcher and researcher are stable, sketch the LangGraph orchestrator that chains `JDParser -> CompanyResearcher -> ProfileMatcher`.
