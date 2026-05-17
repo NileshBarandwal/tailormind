@@ -64,9 +64,13 @@ export default function JobCard({ job, onSelect, selected }: JobCardProps) {
         <button
           type="button"
           onClick={() => onSelect(job)}
-          className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-blue-700"
+          className={`rounded px-3 py-1 text-xs font-medium text-white transition ${
+            selected
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          {selected ? "Selected" : "Select for generation"}
+          {selected ? "Selected ✓" : "Select + Generate ↓"}
         </button>
       </div>
     </article>

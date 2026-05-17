@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ApplicationCard,
   DiscoveredJobs,
@@ -71,8 +71,11 @@ export default function DashboardPage() {
 
   const [companyName, setCompanyName] = useState("");
   const [website, setWebsite] = useState("");
+  const [websiteAutoFilled, setWebsiteAutoFilled] = useState(false);
   const [jobUrl, setJobUrl] = useState("");
   const [instructions, setInstructions] = useState("");
+
+  const generationRef = useRef<HTMLDivElement>(null);
 
   const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
@@ -110,6 +113,18 @@ export default function DashboardPage() {
       }
     }
     load();
+
+    try {
+      const cached = sessionStorage.getItem("tm_results");
+      const cachedQuery = sessionStorage.getItem("tm_query");
+      const cachedJob = sessionStorage.getItem("tm_selected_job");
+      if (cached) setResults(JSON.parse(cached) as DiscoveredJobs);
+      if (cachedQuery) setQuery(cachedQuery);
+      if (cachedJob) setSelectedJob(JSON.parse(cachedJob) as JobListing);
+    } catch (e) {
+      console.error("Failed to restore session cache:", e);
+    }
+
     return () => {
       cancelled = true;
     };
@@ -136,6 +151,12 @@ export default function DashboardPage() {
   async function selectJob(job: JobListing) {
     setSelectedJob(job);
     setCompanyName(job.company);
+    const slug = job.company
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 30);
+    setWebsite(`https://www.${slug}.com`);
+    setWebsiteAutoFilled(true);
     setJobUrl(job.url);
     setResume(null);
     setCoverLetter(null);
@@ -146,6 +167,20 @@ export default function DashboardPage() {
     setResumeError("");
     setCoverLetterError("");
     setCardError("");
+
+    try {
+      sessionStorage.setItem("tm_selected_job", JSON.stringify(job));
+    } catch (e) {
+      console.error("Failed to persist selected job:", e);
+    }
+
+    setTimeout(() => {
+      generationRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+
     try {
       const score = await matchProfile(PROFILE_ID, buildJdText(job));
       setMatchScore(score);
@@ -170,8 +205,21 @@ export default function DashboardPage() {
     setResults(null);
     setSelectedJob(null);
     try {
+      sessionStorage.removeItem("tm_results");
+      sessionStorage.removeItem("tm_query");
+      sessionStorage.removeItem("tm_selected_job");
+    } catch (e) {
+      console.error("Failed to clear session cache:", e);
+    }
+    try {
       const data = await discoverJobs(PROFILE_ID, query, location, maxResults);
       setResults(data);
+      try {
+        sessionStorage.setItem("tm_results", JSON.stringify(data));
+        sessionStorage.setItem("tm_query", query);
+      } catch (e) {
+        console.error("Failed to persist results:", e);
+      }
     } catch (e) {
       setDiscoverError(e instanceof Error ? e.message : "Discover failed");
     } finally {
@@ -417,7 +465,32 @@ export default function DashboardPage() {
       </section>
 
       {selectedJob && (
-        <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <section
+          ref={generationRef}
+          className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+        >
+          <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded px-3 py-2">
+            <span>⚡</span>
+            <span>
+              Generating for: <strong>{selectedJob.title}</strong> at{" "}
+              <strong>{selectedJob.company}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedJob(null);
+                try {
+                  sessionStorage.removeItem("tm_selected_job");
+                } catch (e) {
+                  console.error("Failed to clear selected job:", e);
+                }
+              }}
+              className="ml-auto text-slate-500 hover:text-slate-700 text-xs"
+            >
+              ✕ Clear
+            </button>
+          </div>
+
           <h2 className="text-lg font-semibold">Generate application</h2>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -435,10 +508,19 @@ export default function DashboardPage() {
               <input
                 type="text"
                 value={website}
-                onChange={(e) => setWebsite(e.target.value)}
+                onChange={(e) => {
+                  setWebsite(e.target.value);
+                  setWebsiteAutoFilled(false);
+                }}
                 placeholder="https://..."
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
               />
+              {websiteAutoFilled && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Auto-guessed from company name. Please verify or correct
+                  before generating.
+                </p>
+              )}
             </label>
             <label className="text-sm md:col-span-2">
               <span className="block text-slate-700">Job URL</span>
