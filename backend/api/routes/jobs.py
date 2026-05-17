@@ -152,7 +152,7 @@ def discover_company_roles(request: CompanyTargetRequest) -> CompanyRoles:
                 _jdp = _JDP()
                 _pm = _PM()
 
-                for role in roles:
+                for role in roles[:10]:
                     try:
                         reqs = (
                             "\n\nRequirements: " + ", ".join(role.requirements)
