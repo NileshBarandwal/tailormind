@@ -94,3 +94,36 @@
 - Define a `UserProfile` schema and a profile-ingest endpoint (`POST /api/profile`) so we have real input for the matcher.
 - Add a live smoke test for `CompanyResearcher` against a small known site (marker `live`).
 - Once the matcher and researcher are stable, sketch the LangGraph orchestrator that chains `JDParser -> CompanyResearcher -> ProfileMatcher`.
+
+---
+
+## Session 3 - User Profile + Profile Matcher + Orchestrator Sketch
+
+### What was built
+- `models/schemas.py`: added `Experience`, `Project`, `Education`, `UserProfile`, and `MatchScore`. Existing `ParsedJD`, `CompanyBrief`, `ResearchReport` left untouched.
+- `api/routes/profile.py`: `POST /api/profile` writes the validated `UserProfile` to `data/profiles/<email_slug>.json`. `GET /api/profile/{profile_id}` reads it back, returning 404 when absent. `email_slug` lowercases the email and collapses non-alphanumerics to underscores.
+- `agents/profile_matcher.py`: `ProfileMatcher.match(profile, jd) -> MatchScore`. Builds a structured candidate vs. JD prompt (skills, experiences with tech, projects with highlights, education, certifications, achievements; then role, level, required/preferred skills, responsibilities, tech stack, culture signals). Calls `match_profile` (Llama 3.3 70B on Groq) with `response_format={"type":"json_object"}`, strips fences defensively, and inflates into `MatchScore`.
+- `api/routes/applications.py`: `POST /api/match` loads the saved profile, parses the JD, returns a `MatchScore`. `POST /api/pipeline` invokes the orchestrator end-to-end and serializes Pydantic models via `model_dump_json` so the response is plain JSON with ISO timestamps.
+- `core/orchestrator.py`: `PipelineState` TypedDict plus three node functions (`node_parse_jd`, `node_research_company`, `node_match_profile`) wired as a linear `parse_jd -> research_company -> match_profile -> END` `StateGraph`. Each node short-circuits if `state["error"]` is already set. `run_pipeline(...)` builds the initial state and calls `app.invoke()`.
+- Tests: `test_profile_matcher.py` (3 mocked tests — schema shape, scores in [0,1], missing-skills detection) and `test_orchestrator.py` (1 test — pipeline state structure, all three agents mocked, profile loaded from a `tmp_path`).
+- `data/` added to `.gitignore`.
+- Real profile saved: `data/profiles/nbarandwal_gmail_com.json` via the running API (POST + GET round-trip verified).
+
+### Key decisions and why
+- **Single `_jd_parser` / `_profile_matcher` instances per route module** rather than per-request. They are cheap to keep around and avoid re-initializing the `ModelRouter` (and re-setting env vars) on every request.
+- **Email-based profile id**, slugified the same way the company researcher slugifies company names. Keeps id derivation deterministic and human-readable without needing a separate id store.
+- **Profiles stored on local disk under `data/profiles/`** rather than Supabase for now. The schema is the contract; we can swap the persistence layer to Supabase later without touching agents.
+- **Orchestrator agents are module-level singletons** (`_jd_parser`, `_company_researcher`, `_profile_matcher`) so tests can patch them by name with `unittest.mock.patch`. This is the simplest seam that keeps `run_pipeline` testable without dependency injection plumbing.
+- **`PipelineState` is `TypedDict, total=False`** so partial updates (single-node outputs) are valid against the type. LangGraph merges per-node returns into the running state — `total=False` matches that semantics.
+- **Error handling is "set state['error'] and skip"**, exactly as specified. No conditional edges, no retries. Anything more would be premature; the orchestrator skeleton's job is to prove the wiring works.
+- **`POST /api/pipeline` serializes via `model_dump_json` then `json.loads`** to flatten Pydantic models into plain dicts with ISO datetimes. Cleaner than recursive `isinstance` walks and uses Pydantic's own JSON encoder for free.
+- **Tests use `tmp_path` and `patch("...PROFILE_DIR", profile_dir)`** for the orchestrator so the test never depends on whether the real `data/profiles/` directory happens to contain a fixture.
+
+### Issues encountered and how resolved
+- None — all 9 mocked tests passed on the first run and the manual smoke test POSTed and round-tripped the real profile without changes.
+
+### Start of Session 4
+- Build the resume generator (`agents/resume_generator.py`): consume `UserProfile + ParsedJD + ResearchReport`, generate tailored resume sections via the `generate_resume` task (DeepSeek on OpenRouter). Define a `TailoredResume` schema (sections, bullet list per section, source citations back to profile items).
+- Build the cover letter generator (`agents/cover_letter_generator.py`): same inputs plus the match rationale; emit a `TailoredCoverLetter` schema (greeting, paragraphs, closing) via the `generate_cover_letter` task.
+- Add `POST /api/generate/resume` and `POST /api/generate/cover-letter` routes, then extend the orchestrator with two more nodes after `match_profile`.
+- Add a live smoke test for `CompanyResearcher` against a small static site (marker `live`) to confirm the scrape + chunk + verify + Gemini path end-to-end.
