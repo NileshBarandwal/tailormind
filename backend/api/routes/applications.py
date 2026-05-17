@@ -36,12 +36,26 @@ class MatchRequest(BaseModel):
 
 @router.post("/match", response_model=MatchScore)
 def match(request: MatchRequest) -> MatchScore:
-    profile = _load_profile(request.profile_id)
     try:
-        parsed_jd = _jd_parser.parse(request.jd_text)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    return _profile_matcher.match(profile, parsed_jd)
+        profile = _load_profile(request.profile_id)
+        try:
+            parsed_jd = _jd_parser.parse(request.jd_text)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400, detail=f"JD parsing failed: {exc}"
+            )
+        try:
+            return _profile_matcher.match(profile, parsed_jd)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Profile matching failed: {exc}"
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Match endpoint error: {exc}"
+        )
 
 
 class PipelineRequest(BaseModel):

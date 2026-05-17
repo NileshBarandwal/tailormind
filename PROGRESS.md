@@ -283,6 +283,10 @@
 ### Issues encountered and how resolved
 - **None blocking.** Backend mocked tests stayed green (28/28) through the entire session. The live `ApplicationCard` test passed first run against Anthropic. Frontend build went from 4 routes to 5 (added `/profile`) with zero TypeScript errors.
 
+### Post-session hotfix (2026-05-17)
+- `parse_jd` switched from `groq/qwen/qwen3-32b` to `groq/llama-3.3-70b-versatile`. Qwen3-32B is a thinking model and emits `<think>...</think>` reasoning tokens before its JSON output; Groq's strict `response_format={"type":"json_object"}` validator rejects those responses as invalid JSON non-deterministically (`json_validate_failed` with empty `failed_generation`), surfacing as 500s on `/api/match` and intermittently on `/api/generate/*`. Llama 3.3 70B handles Groq's JSON mode reliably and is already proven on `match_profile` and `filter_jobs`. Task map is now Llama-3.3-on-Groq for everything except `research_company` (Gemini) and `generate_resume`/`generate_cover_letter` (DeepSeek).
+- `POST /api/match` wrapped in try/except so any future model failure returns a structured 4xx/5xx with the error message instead of an uncaught stack trace.
+
 ### Final project status
 - **Backend**: 7 agents, 16 API endpoints (counting the 5 new application-store routes), 5-node LangGraph orchestrator, ChromaDB with SHA-256 verification, AuditLogger to file + Supabase, WeasyPrint PDF export. 28 mocked + 4 live tests all passing.
 - **Frontend**: Next.js 14 / TypeScript / Tailwind. Dashboard (discovery + generation + match analysis + saved apps + instructions), Generate page (manual JD), Profile page (onboarding), Instructions page. Single Next.js proxy seam to the backend that works locally and on Vercel.
