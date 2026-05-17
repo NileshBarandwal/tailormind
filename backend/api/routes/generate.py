@@ -1,0 +1,81 @@
+import json
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from backend.agents.company_researcher import CompanyResearcher
+from backend.agents.cover_letter_generator import CoverLetterGenerator
+from backend.agents.jd_parser import JDParser
+from backend.agents.profile_matcher import ProfileMatcher
+from backend.agents.resume_generator import ResumeGenerator
+from backend.core.config import PROJECT_ROOT
+from backend.models.schemas import (
+    TailoredCoverLetter,
+    TailoredResume,
+    UserProfile,
+)
+
+
+router = APIRouter()
+
+
+PROFILE_DIR = PROJECT_ROOT / "data" / "profiles"
+
+
+_jd_parser = JDParser()
+_company_researcher = CompanyResearcher()
+_profile_matcher = ProfileMatcher()
+_resume_generator = ResumeGenerator()
+_cover_letter_generator = CoverLetterGenerator()
+
+
+def _load_profile(profile_id: str) -> UserProfile:
+    path = PROFILE_DIR / f"{profile_id}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Profile '{profile_id}' not found")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return UserProfile(**data)
+
+
+class GenerateResumeRequest(BaseModel):
+    profile_id: str
+    jd_text: str
+    company_name: str
+    website: str
+    instructions: str = ""
+
+
+class GenerateCoverLetterRequest(BaseModel):
+    profile_id: str
+    jd_text: str
+    company_name: str
+    website: str
+    instructions: str = ""
+
+
+def _prepare_context(req) -> tuple:
+    profile = _load_profile(req.profile_id)
+    try:
+        parsed_jd = _jd_parser.parse(req.jd_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    research = _company_researcher.research(req.company_name, req.website)
+    match = _profile_matcher.match(profile, parsed_jd)
+    return profile, parsed_jd, research, match
+
+
+@router.post("/generate/resume", response_model=TailoredResume)
+def generate_resume(request: GenerateResumeRequest) -> TailoredResume:
+    profile, parsed_jd, research, match = _prepare_context(request)
+    return _resume_generator.generate(
+        profile, parsed_jd, research, match, request.instructions
+    )
+
+
+@router.post("/generate/cover-letter", response_model=TailoredCoverLetter)
+def generate_cover_letter(request: GenerateCoverLetterRequest) -> TailoredCoverLetter:
+    profile, parsed_jd, research, match = _prepare_context(request)
+    return _cover_letter_generator.generate(
+        profile, parsed_jd, research, match, request.instructions
+    )

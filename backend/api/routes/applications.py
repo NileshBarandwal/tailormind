@@ -49,6 +49,7 @@ class PipelineRequest(BaseModel):
     company_name: str
     website: str
     profile_id: str
+    instructions: str = ""
 
 
 @router.post("/pipeline")
@@ -58,6 +59,7 @@ def pipeline(request: PipelineRequest) -> dict:
         company_name=request.company_name,
         website=request.website,
         profile_id=request.profile_id,
+        instructions=request.instructions,
     )
     return _serialize_state(state)
 

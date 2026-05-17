@@ -84,3 +84,29 @@ class MatchScore(BaseModel):
     matched_skills: list[str] = Field(default_factory=list)
     missing_skills: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
+
+
+class ResumeSection(BaseModel):
+    title: str
+    bullets: list[str] = Field(default_factory=list)
+    order: int = 0
+
+
+class TailoredResume(BaseModel):
+    profile_name: str
+    target_role: str
+    summary: str
+    sections: list[ResumeSection] = Field(default_factory=list)
+    skills_highlighted: list[str] = Field(default_factory=list)
+    jd_keywords_used: list[str] = Field(default_factory=list)
+    generated_at: datetime
+
+
+class TailoredCoverLetter(BaseModel):
+    profile_name: str
+    target_role: str
+    company_name: str
+    greeting: str
+    paragraphs: list[str] = Field(default_factory=list)
+    closing: str
+    generated_at: datetime

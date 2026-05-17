@@ -10,7 +10,7 @@ from backend.services.audit_logger import AuditLogger
 
 TASK_MODEL_MAP: dict[str, str] = {
     "parse_jd": "groq/qwen/qwen3-32b",
-    "research_company": "gemini/gemini-2.5-pro",
+    "research_company": "gemini/gemini-2.5-flash-lite",
     "match_profile": "groq/llama-3.3-70b-versatile",
     "generate_resume": "openrouter/deepseek/deepseek-chat",
     "generate_cover_letter": "openrouter/deepseek/deepseek-chat",

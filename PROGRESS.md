@@ -127,3 +127,38 @@
 - Build the cover letter generator (`agents/cover_letter_generator.py`): same inputs plus the match rationale; emit a `TailoredCoverLetter` schema (greeting, paragraphs, closing) via the `generate_cover_letter` task.
 - Add `POST /api/generate/resume` and `POST /api/generate/cover-letter` routes, then extend the orchestrator with two more nodes after `match_profile`.
 - Add a live smoke test for `CompanyResearcher` against a small static site (marker `live`) to confirm the scrape + chunk + verify + Gemini path end-to-end.
+
+---
+
+## Session 4 - Resume Generator + Cover Letter Generator
+
+### What was built
+- `models/schemas.py`: added `ResumeSection`, `TailoredResume`, `TailoredCoverLetter`. Existing schemas untouched.
+- `agents/resume_generator.py`: `ResumeGenerator.generate(profile, jd, research, match, instructions="") -> TailoredResume`. Hand-built structured prompt sections — CANDIDATE PROFILE, TARGET JOB, COMPANY CONTEXT, MATCH INSIGHTS, plus optional ADDITIONAL INSTRUCTIONS. System prompt enforces the 5-section minimum (Summary, Experience, Projects, Skills, Education) and the "no inventing facts" rule. Calls `generate_resume` (DeepSeek via OpenRouter) with `response_format={"type":"json_object"}`. `generated_at` is stamped server-side.
+- `agents/cover_letter_generator.py`: `CoverLetterGenerator.generate(...)` with the same signature. Server-side relevance scoring ranks experiences and projects by how many tech entries overlap the JD's required/preferred/stack skills (case-insensitive) — only the top 3 experiences and top 2 projects are included in the prompt, keeping it tight. System prompt mandates exactly 3 paragraphs with a defined narrative arc (why-this-company, evidence, forward-looking).
+- `api/routes/generate.py`: `POST /api/generate/resume` and `POST /api/generate/cover-letter`. Both share `_prepare_context()` which loads profile -> parses JD -> researches company -> matches profile, then dispatches to the appropriate generator with the user's `instructions`.
+- `api/main.py`: `generate` router included with prefix `/api` and tag `generate`.
+- `core/orchestrator.py`: `PipelineState` extended with `instructions`, `tailored_resume`, `tailored_cover_letter`. Two new nodes (`node_generate_resume`, `node_generate_cover_letter`) appended. Graph is now a 5-step linear chain: `parse_jd -> research_company -> match_profile -> generate_resume -> generate_cover_letter -> END`. `run_pipeline()` gained an `instructions: str = ""` parameter.
+- `api/routes/applications.py`: `PipelineRequest.instructions: str = ""` added and forwarded to `run_pipeline`.
+- Tests: `test_resume_generator.py` (schema, 5-section coverage, instruction passthrough), `test_cover_letter_generator.py` (schema, 3-paragraph rule, instruction passthrough), `test_company_researcher.py` (live).
+- End-to-end smoke: `POST /api/generate/resume` against the real model stack produced a `TailoredResume` with `target_role="AI/ML Engineer"`, 4 ordered sections (Projects, Experience, Education, Skills), 4 highlighted skills, and 7 JD keywords woven in.
+
+### Key decisions and why
+- **`gemini/gemini-2.5-pro` swapped to `gemini/gemini-2.5-flash-lite`**. The provisioned Google AI Studio API key has a hard zero on free-tier quota for `gemini-2.5-pro` (`"limit: 0, model: gemini-2.5-pro"`); the only Gemini model that completed a probe call was `gemini-2.5-flash-lite`. Closest available 2.5-family model on this key, per the same "closest available" convention used for Qwen.
+- **Top-N relevance trimming in the cover letter prompt** (3 experiences, 2 projects) was needed because cover letters become generic when the model is dumped the entire profile. The scoring is a simple intersection between item `tech_used` and JD skill sets — deterministic, no LLM call, debuggable from the prompt log.
+- **Shared `_prepare_context()` in `generate.py`** keeps `/api/generate/resume` and `/api/generate/cover-letter` from drifting. Both endpoints must run the same upstream pipeline before generation, so colocating the loader removes the temptation to special-case one.
+- **Module-level singleton instances of all five agents** in both `orchestrator.py` and `generate.py`. Initial cost is paid once at import (LiteLLM env setup, Chroma client, ONNX embedding model). The 41s pytest wall-clock comes from this initialization, not from the tests themselves — the tests are fully mocked.
+- **`_load_profile_from_state` helper in orchestrator** reduces the duplicated "check error -> load profile -> handle missing" prelude that every downstream node would otherwise repeat. Sets `state['error']` on miss and returns `None`; callers just `return state` immediately.
+- **`response_format={"type":"json_object"}` is set everywhere a structured output is expected** — `parse_jd`, `match_profile`, `generate_resume`, `generate_cover_letter`. Different providers honor it inconsistently, so each generator still defensively strips markdown fences as a fallback.
+
+### Issues encountered and how resolved
+- **Playwright Chromium was missing on first live run** of the company researcher; `crawl4ai` invocation surfaced `BrowserType.launch: Executable doesn't exist`. Fixed by running `playwright install chromium` (one-time, ~92 MB).
+- **Gemini 2.5 Pro returned a 429 "limit: 0"** on the first live researcher run. Probed alternatives and swapped to `gemini-2.5-flash-lite`; live test passed.
+- **End-to-end smoke against `https://www.kogniverse.ai` failed** with `ERR_NAME_NOT_RESOLVED` — the domain provided in the spec is not registered, so the researcher had no chunks to work with and raised `ValueError("No usable content scraped...")`. Substituted `https://anthropic.com` (already proven reachable in the live test) to actually exercise the path and observe the final `TailoredResume`. The model stack itself works; the original spec URL is just dead.
+
+### Start of Session 5
+- Build the job discovery agent (`agents/job_discovery.py`): pull listings from Adzuna + Remotive, then use the `filter_jobs` task (Llama 3.3 70B) to filter by candidate preferences. Define `JobListing` and `DiscoveredJobs` schemas.
+- Add `POST /api/discover` that takes `{profile_id, query, location}` and returns ranked listings.
+- Add the instruction-edit endpoint: `POST /api/instructions` for persistent preferences, `POST /api/instructions/per-job` for per-job overrides (project rule #3). Store under `data/instructions/`.
+- Add the export pipeline scaffolding: `POST /api/export/resume` and `POST /api/export/cover-letter` rendering the latest `TailoredResume` / `TailoredCoverLetter` to PDF via WeasyPrint (project rule #4 — user reviews before exporting).
+- Add a live end-to-end orchestrator smoke (marker `live`) that runs `run_pipeline()` against Anthropic and asserts all 5 state fields are populated.
