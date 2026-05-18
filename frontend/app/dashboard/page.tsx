@@ -30,6 +30,14 @@ import {
   saveApplication,
   type GenerationEvent,
 } from "@/lib/api";
+import {
+  jobKey,
+  lsGet,
+  lsSet,
+  lsDel,
+  JOB_KEYS,
+  GLOBAL_KEYS,
+} from "@/lib/persistence";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
 import InstructionPanel from "@/components/InstructionPanel";
@@ -172,6 +180,10 @@ export default function DashboardPage() {
       console.error("Failed to restore session cache:", e);
     }
 
+    // Restore global persisted state
+    const savedInstructions = lsGet<string>(GLOBAL_KEYS.instructions);
+    if (savedInstructions) setInstructions(savedInstructions);
+
     return () => {
       cancelled = true;
     };
@@ -221,6 +233,24 @@ export default function DashboardPage() {
     setCardError("");
     setStructuredResume(null);
     setStructuredError("");
+
+    // Restore persisted content for this job if it exists
+    const k = jobKey(job.url);
+    const savedResume = lsGet<StructuredResume>(
+      JOB_KEYS.structuredResume(k)
+    );
+    const savedLetter = lsGet<TailoredCoverLetter>(
+      JOB_KEYS.coverLetter(k)
+    );
+    const savedCard = lsGet<ApplicationCard>(JOB_KEYS.card(k));
+    const savedCompany = lsGet<string>(JOB_KEYS.companyName(k));
+    const savedWebsite = lsGet<string>(JOB_KEYS.website(k));
+
+    if (savedResume) setStructuredResume(savedResume);
+    if (savedLetter) setCoverLetter(savedLetter);
+    if (savedCard) setCard(savedCard);
+    if (savedCompany) setCompanyName(savedCompany);
+    if (savedWebsite) setWebsite(savedWebsite);
 
     try {
       sessionStorage.setItem("tm_selected_job", JSON.stringify(job));
@@ -315,6 +345,9 @@ export default function DashboardPage() {
         instructions,
       );
       setCoverLetter(l);
+      if (selectedJob?.url) {
+        lsSet(JOB_KEYS.coverLetter(jobKey(selectedJob.url)), l);
+      }
       refreshMatchScore();
     } catch (e) {
       setCoverLetterError(e instanceof Error ? e.message : "Generation failed");
@@ -337,6 +370,9 @@ export default function DashboardPage() {
         instructions,
       );
       setCard(c);
+      if (selectedJob?.url) {
+        lsSet(JOB_KEYS.card(jobKey(selectedJob.url)), c);
+      }
       refreshMatchScore();
     } catch (e) {
       setCardError(e instanceof Error ? e.message : "Generation failed");
@@ -375,6 +411,12 @@ export default function DashboardPage() {
               prev.map((s) => ({ ...s, status: "done" as const })),
             );
             setStructuredResume(event.data);
+            if (selectedJob?.url) {
+              const k = jobKey(selectedJob.url);
+              lsSet(JOB_KEYS.structuredResume(k), event.data);
+              lsSet(JOB_KEYS.companyName(k), companyName);
+              lsSet(JOB_KEYS.website(k), website);
+            }
           } else if (event.type === "error") {
             setStructuredError(event.message);
           }
@@ -741,6 +783,14 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => {
+                if (selectedJob?.url) {
+                  const k = jobKey(selectedJob.url);
+                  lsDel(JOB_KEYS.structuredResume(k));
+                  lsDel(JOB_KEYS.coverLetter(k));
+                  lsDel(JOB_KEYS.card(k));
+                  lsDel(JOB_KEYS.companyName(k));
+                  lsDel(JOB_KEYS.website(k));
+                }
                 setSelectedJob(null);
                 try {
                   sessionStorage.removeItem("tm_selected_job");
@@ -807,7 +857,10 @@ export default function DashboardPage() {
               <span className="block text-slate-700">Any specific instructions?</span>
               <textarea
                 value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
+                onChange={(e) => {
+                  setInstructions(e.target.value);
+                  lsSet(GLOBAL_KEYS.instructions, e.target.value);
+                }}
                 rows={3}
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
               />

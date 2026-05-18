@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ApplicationCard,
   StructuredResume,
@@ -16,6 +16,13 @@ import {
   generateStructuredResumeStream,
   type GenerationEvent,
 } from "@/lib/api";
+import {
+  jobKey,
+  lsGet,
+  lsSet,
+  JOB_KEYS,
+  GLOBAL_KEYS,
+} from "@/lib/persistence";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
 import GenerationProgress from "@/components/GenerationProgress";
@@ -74,6 +81,24 @@ export default function GeneratePage() {
   const canGenerate =
     jdText.trim().length >= 50 && companyName.trim() && website.trim();
 
+  useEffect(() => {
+    const savedInstructions = lsGet<string>(GLOBAL_KEYS.instructions);
+    if (savedInstructions) setInstructions(savedInstructions);
+    const lastKey = lsGet<string>("tm_generate_last_key");
+    if (lastKey) {
+      const sr = lsGet<StructuredResume>(JOB_KEYS.structuredResume(lastKey));
+      const cl = lsGet<TailoredCoverLetter>(JOB_KEYS.coverLetter(lastKey));
+      const ca = lsGet<ApplicationCard>(JOB_KEYS.card(lastKey));
+      const cn = lsGet<string>(JOB_KEYS.companyName(lastKey));
+      const ws = lsGet<string>(JOB_KEYS.website(lastKey));
+      if (sr) setStructuredResume(sr);
+      if (cl) setCoverLetter(cl);
+      if (ca) setCard(ca);
+      if (cn) setCompanyName(cn);
+      if (ws) setWebsite(ws);
+    }
+  }, []);
+
   async function handleGenerateResume() {
     setResumeLoading(true);
     setResumeError("");
@@ -92,15 +117,21 @@ export default function GeneratePage() {
     setLetterLoading(true);
     setCoverLetterError("");
     try {
-      setCoverLetter(
-        await generateCoverLetter(
-          PROFILE_ID,
-          jdText,
-          companyName,
-          website,
-          instructions,
-        ),
+      const l = await generateCoverLetter(
+        PROFILE_ID,
+        jdText,
+        companyName,
+        website,
+        instructions,
       );
+      setCoverLetter(l);
+      if (companyName) {
+        const k = jobKey(companyName);
+        lsSet("tm_generate_last_key", k);
+        lsSet(JOB_KEYS.coverLetter(k), l);
+        lsSet(JOB_KEYS.companyName(k), companyName);
+        lsSet(JOB_KEYS.website(k), website);
+      }
     } catch (e) {
       setCoverLetterError(e instanceof Error ? e.message : "Generation failed");
     } finally {
@@ -112,16 +143,22 @@ export default function GeneratePage() {
     setCardLoading(true);
     setCardError("");
     try {
-      setCard(
-        await generateApplicationCard(
-          PROFILE_ID,
-          jdText,
-          companyName,
-          website,
-          jobUrl,
-          instructions,
-        ),
+      const c = await generateApplicationCard(
+        PROFILE_ID,
+        jdText,
+        companyName,
+        website,
+        jobUrl,
+        instructions,
       );
+      setCard(c);
+      if (companyName) {
+        const k = jobKey(companyName);
+        lsSet("tm_generate_last_key", k);
+        lsSet(JOB_KEYS.card(k), c);
+        lsSet(JOB_KEYS.companyName(k), companyName);
+        lsSet(JOB_KEYS.website(k), website);
+      }
     } catch (e) {
       setCardError(e instanceof Error ? e.message : "Generation failed");
     } finally {
@@ -158,6 +195,13 @@ export default function GeneratePage() {
               prev.map((s) => ({ ...s, status: "done" as const })),
             );
             setStructuredResume(event.data);
+            if (companyName) {
+              const k = jobKey(companyName);
+              lsSet("tm_generate_last_key", k);
+              lsSet(JOB_KEYS.structuredResume(k), event.data);
+              lsSet(JOB_KEYS.companyName(k), companyName);
+              lsSet(JOB_KEYS.website(k), website);
+            }
           } else if (event.type === "error") {
             setStructuredError(event.message);
           }
@@ -266,7 +310,10 @@ export default function GeneratePage() {
             <span className="block text-slate-700">Instructions</span>
             <textarea
               value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
+              onChange={(e) => {
+                setInstructions(e.target.value);
+                lsSet(GLOBAL_KEYS.instructions, e.target.value);
+              }}
               rows={3}
               className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
             />

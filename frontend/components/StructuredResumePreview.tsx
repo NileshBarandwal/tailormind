@@ -5,6 +5,7 @@ import type {
   StructuredExperience,
   StructuredResume,
 } from "@/types";
+import { lsGet, lsSet, GLOBAL_KEYS } from "@/lib/persistence";
 
 interface Props {
   resume: StructuredResume;
@@ -272,7 +273,9 @@ export function generateLatex(resume: StructuredResume): string {
 
 export default function StructuredResumePreview({ resume }: Props) {
   const printRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<"preview" | "latex">("preview");
+  const [activeTab, setActiveTab] = useState<"preview" | "latex">(
+    () => (lsGet<string>(GLOBAL_KEYS.previewTab) as "preview" | "latex") ?? "preview"
+  );
   const [latexCode, setLatexCode] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -318,6 +321,7 @@ export default function StructuredResumePreview({ resume }: Props) {
 
   function handleTabChange(tab: "preview" | "latex") {
     setActiveTab(tab);
+    lsSet(GLOBAL_KEYS.previewTab, tab);
     if (tab === "latex" && !latexCode) {
       setLatexCode(generateLatex(resume));
     }
