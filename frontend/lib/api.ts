@@ -39,6 +39,23 @@ export function saveProfile(
   });
 }
 
+export function checkProfileExists(): Promise<{
+  exists: boolean;
+  profile_id: string | null;
+}> {
+  return apiFetch("/profile-exists");
+}
+
+export function submitOnboarding(payload: unknown): Promise<{
+  status: string;
+  profile_id: string;
+}> {
+  return apiFetch("/onboarding", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function matchProfile(
   profileId: string,
   jdText: string,

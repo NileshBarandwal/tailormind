@@ -3,11 +3,11 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import type { UserProfile } from "@/types";
 import { getProfile, saveProfile } from "@/lib/api";
+import { getActiveProfileId } from "@/lib/persistence";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-const PROFILE_ID = "nbarandwal_gmail_com";
-
 export default function ProfilePage() {
+  const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");

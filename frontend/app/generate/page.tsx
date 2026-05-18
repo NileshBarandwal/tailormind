@@ -31,10 +31,10 @@ import GenerationProgress, {
 import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
-
-const PROFILE_ID = "nbarandwal_gmail_com";
+import { getActiveProfileId } from "@/lib/persistence";
 
 export default function GeneratePage() {
+  const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
   const [jdText, setJdText] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [website, setWebsite] = useState("");

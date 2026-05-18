@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type {
   ApplicationCard,
   CompanyRoles,
@@ -15,6 +16,7 @@ import type {
   UserProfile,
 } from "@/types";
 import {
+  checkProfileExists,
   deleteApplication,
   discoverCompanyRoles,
   discoverJobs,
@@ -37,6 +39,8 @@ import {
   lsDel,
   JOB_KEYS,
   GLOBAL_KEYS,
+  getActiveProfileId,
+  setActiveProfileId,
 } from "@/lib/persistence";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
@@ -51,7 +55,6 @@ import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 
-const PROFILE_ID = "nbarandwal_gmail_com";
 
 const ROLE_PRESETS = [
   "AI Engineer",
@@ -84,6 +87,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState("");
 
@@ -158,6 +163,22 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      // First-run detection: check if any profile exists
+      try {
+        const { exists, profile_id } = await checkProfileExists();
+        if (!exists) {
+          router.replace("/onboarding");
+          return;
+        }
+        if (profile_id) {
+          const stored = getActiveProfileId();
+          if (!stored) {
+            setActiveProfileId(profile_id);
+          }
+        }
+      } catch {
+        // If check fails, proceed normally (don't block dashboard)
+      }
       try {
         const data = await getProfile(PROFILE_ID);
         if (!cancelled) setProfile(data);

@@ -69,3 +69,24 @@ export const GLOBAL_KEYS = {
   instructions: "tm_instructions",
   previewTab:   "tm_preview_tab",
 };
+
+// Active profile ID — stored in localStorage
+export const PROFILE_STORAGE_KEY = "tm_profile_id";
+
+export function getActiveProfileId(): string | null {
+  if (!isBrowser()) return null;
+  try {
+    return localStorage.getItem(PROFILE_STORAGE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveProfileId(id: string): void {
+  if (!isBrowser()) return;
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}

@@ -238,3 +238,42 @@ class StructuredResume(BaseModel):
     target_role: str = ""
     jd_keywords_used: list[str] = Field(default_factory=list)
     generated_at: datetime
+
+
+class OnboardingEducation(BaseModel):
+    examination: str = ""
+    university: str = ""
+    institute: str = ""
+    year: int = 2024
+    cgpa: str = ""
+
+
+class OnboardingExperience(BaseModel):
+    company: str = ""
+    role: str = ""
+    duration: str = ""
+    guide: str = ""
+    bullets: list[str] = Field(default_factory=list)
+
+
+class OnboardingProject(BaseModel):
+    name: str = ""
+    tech_stack: str = ""
+    category: str = "personal"
+    live_url: str = ""
+    repo_url: str = ""
+    bullets: list[str] = Field(default_factory=list)
+
+
+class OnboardingRequest(BaseModel):
+    full_name: str
+    email: str
+    phone: str = ""
+    github_url: str = ""
+    linkedin_url: str = ""
+    iit_email: str = ""
+    summary: str = ""
+    education: list[OnboardingEducation] = Field(default_factory=list)
+    skill_categories: dict[str, str] = Field(default_factory=dict)
+    work_experience: list[OnboardingExperience] = Field(default_factory=list)
+    projects: list[OnboardingProject] = Field(default_factory=list)

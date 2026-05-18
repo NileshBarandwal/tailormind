@@ -1,8 +1,10 @@
-import InstructionPanel from "@/components/InstructionPanel";
+"use client";
 
-const PROFILE_ID = "nbarandwal_gmail_com";
+import InstructionPanel from "@/components/InstructionPanel";
+import { getActiveProfileId } from "@/lib/persistence";
 
 export default function InstructionsPage() {
+  const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
   return (
     <div className="space-y-6">
       <header>
