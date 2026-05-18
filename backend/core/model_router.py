@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import litellm
+from litellm.exceptions import RateLimitError
 
 from backend.core.config import settings
 from backend.services.audit_logger import AuditLogger
@@ -16,6 +17,12 @@ TASK_MODEL_MAP: dict[str, str] = {
     "generate_cover_letter": "openrouter/deepseek/deepseek-chat",
     "filter_jobs": "groq/llama-3.3-70b-versatile",
     "application_card": "groq/llama-3.3-70b-versatile",
+}
+
+
+FALLBACK_MODEL_MAP: dict[str, str] = {
+    "groq/llama-3.3-70b-versatile": "gemini/gemini-2.5-flash-lite",
+    "groq/qwen/qwen3-32b": "gemini/gemini-2.5-flash-lite",
 }
 
 
@@ -49,7 +56,21 @@ class ModelRouter:
         if response_format is not None:
             kwargs["response_format"] = response_format
 
-        response = litellm.completion(**kwargs)
+        try:
+            response = litellm.completion(**kwargs)
+        except RateLimitError:
+            fallback = FALLBACK_MODEL_MAP.get(model)
+            if fallback:
+                print(
+                    f"[model_router] Groq rate limit hit for {model}, "
+                    f"falling back to {fallback}"
+                )
+                kwargs["model"] = fallback
+                response = litellm.completion(**kwargs)
+                model = fallback
+            else:
+                raise
+
         content = response["choices"][0]["message"]["content"]
 
         audit_logger.log(
