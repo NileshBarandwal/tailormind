@@ -9,6 +9,7 @@ import type {
   JobListing,
   MatchScore,
   SavedApplication,
+  StructuredResume,
   TailoredCoverLetter,
   TailoredResume,
   UserProfile,
@@ -22,6 +23,7 @@ import {
   generateApplicationCard,
   generateCoverLetter,
   generateResume,
+  generateStructuredResume,
   getProfile,
   listApplications,
   matchProfile,
@@ -34,6 +36,7 @@ import JobCard from "@/components/JobCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MatchScoreCard from "@/components/MatchScoreCard";
 import ResumePreview from "@/components/ResumePreview";
+import StructuredResumePreview from "@/components/StructuredResumePreview";
 
 const PROFILE_ID = "nbarandwal_gmail_com";
 
@@ -100,6 +103,11 @@ export default function DashboardPage() {
   const [resumeError, setResumeError] = useState("");
   const [coverLetterError, setCoverLetterError] = useState("");
   const [cardError, setCardError] = useState("");
+
+  const [structuredResume, setStructuredResume] =
+    useState<StructuredResume | null>(null);
+  const [structuredLoading, setStructuredLoading] = useState(false);
+  const [structuredError, setStructuredError] = useState("");
 
   const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
@@ -190,6 +198,8 @@ export default function DashboardPage() {
     setResumeError("");
     setCoverLetterError("");
     setCardError("");
+    setStructuredResume(null);
+    setStructuredError("");
 
     try {
       sessionStorage.setItem("tm_selected_job", JSON.stringify(job));
@@ -311,6 +321,29 @@ export default function DashboardPage() {
       setCardError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setCardLoading(false);
+    }
+  }
+
+  async function handleGenerateStructuredResume() {
+    if (!selectedJob) return;
+    setStructuredLoading(true);
+    setStructuredError("");
+    setStructuredResume(null);
+    try {
+      const r = await generateStructuredResume(
+        PROFILE_ID,
+        buildJdText(),
+        companyName,
+        website,
+        instructions,
+      );
+      setStructuredResume(r);
+    } catch (e) {
+      setStructuredError(
+        e instanceof Error ? e.message : "Generation failed",
+      );
+    } finally {
+      setStructuredLoading(false);
     }
   }
 
@@ -739,7 +772,20 @@ export default function DashboardPage() {
             </label>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={handleGenerateStructuredResume}
+                disabled={!canGenerate || structuredLoading}
+                className="w-full rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {structuredLoading ? "Composing..." : "New Resume ✦"}
+              </button>
+              {structuredError && (
+                <p className="text-xs text-red-600">{structuredError}</p>
+              )}
+            </div>
             <div className="space-y-1">
               <button
                 type="button"
@@ -818,6 +864,18 @@ export default function DashboardPage() {
             <div>
               <h3 className="mb-2 text-lg font-semibold">Application Intelligence Card</h3>
               <ApplicationCardView card={card} />
+            </div>
+          )}
+
+          {structuredResume && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">Resume Preview</h3>
+                <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 font-medium">
+                  WYSIWYG
+                </span>
+              </div>
+              <StructuredResumePreview resume={structuredResume} />
             </div>
           )}
         </section>
