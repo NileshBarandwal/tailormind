@@ -277,7 +277,43 @@ export default function StructuredResumePreview({ resume }: Props) {
   const [copied, setCopied] = useState(false);
 
   function handlePrint() {
-    window.print();
+    const resumeEl = document.getElementById("resume-document");
+    if (!resumeEl) { window.print(); return; }
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) { window.print(); return; }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Resume</title>
+  <style>
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+    @page { size: A4; margin: 0; }
+    html, body { margin: 0; padding: 0; background: white; }
+    body { font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; font-size: 10pt; color: #000; }
+    .resume-wrap { width: 210mm; margin: 0 auto; padding: 14mm; }
+    @media print {
+      .resume-wrap { width: 100%; margin: 0; }
+    }
+    /* Section headers */
+    .section-head { background-color: #999; padding: 2px 4px; margin-top: 6px; margin-bottom: 2px; }
+    .section-head span { font-weight: bold; font-size: 10pt; color: #000; }
+  </style>
+</head>
+<body>
+  <div class="resume-wrap">
+    ${resumeEl.innerHTML}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); window.close(); }, 300);
+    };
+  </script>
+</body>
+</html>`);
+    printWindow.document.close();
   }
 
   function handleTabChange(tab: "preview" | "latex") {
@@ -563,28 +599,15 @@ export default function StructuredResumePreview({ resume }: Props) {
 
       <style>{`
         @media print {
-          * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           @page { size: A4; margin: 14mm; }
+          body > * { display: none !important; }
+          #resume-print-root { display: block !important; }
+          #resume-print-root * { visibility: visible !important; }
           .no-print { display: none !important; }
-          body * { visibility: hidden !important; }
           #resume-document {
-            visibility: visible !important;
-            position: fixed !important;
-            inset: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            max-height: none !important;
-            box-sizing: border-box !important;
-            margin: 0 !important;
-            padding: 0 !important;
             box-shadow: none !important;
-            background: white !important;
-            overflow: visible !important;
           }
-          #resume-document * { visibility: visible !important; }
         }
       `}</style>
     </>
