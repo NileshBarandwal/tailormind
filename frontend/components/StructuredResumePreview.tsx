@@ -25,25 +25,43 @@ function escTex(s: string): string {
     .replace(/\}/g, "\\}");
 }
 
+function splitBoldRest(text: string): { bold: string; rest: string } {
+  const idx = text.indexOf(":");
+  if (idx === -1) return { bold: text, rest: "" };
+  return { bold: text.slice(0, idx).trim(), rest: text.slice(idx + 1).trim() };
+}
+
 export function generateLatex(resume: StructuredResume): string {
   const lines: string[] = [];
 
+  // PREAMBLE
   lines.push("\\documentclass[a4paper,10pt]{article}");
   lines.push(
-    "\\usepackage[top=16mm,bottom=16mm,left=14mm,right=14mm]{geometry}",
+    "\\usepackage[top=15mm,bottom=18mm,left=14.11mm,right=14.11mm]{geometry}",
   );
-  lines.push("\\usepackage{palatino}");
-  lines.push("\\usepackage[T1]{fontenc}");
-  lines.push("\\usepackage{enumitem}");
-  lines.push("\\usepackage{hyperref}");
   lines.push("\\usepackage{graphicx}");
-  lines.push("\\usepackage{tabularx}");
   lines.push("\\usepackage{booktabs}");
-  lines.push("\\usepackage{xcolor}");
+  lines.push("\\usepackage{url}");
+  lines.push("\\usepackage{enumitem}");
+  lines.push("\\usepackage{palatino}");
+  lines.push("\\usepackage{tabularx}");
+  lines.push("\\usepackage{multirow}");
+  lines.push("\\usepackage[T1]{fontenc}");
+  lines.push("\\usepackage[utf8]{inputenc}");
+  lines.push("\\usepackage{fontawesome5}");
+  lines.push("\\usepackage{hyperref}");
+  lines.push("\\usepackage{color}");
+  lines.push("\\definecolor{mygrey}{gray}{0.75}");
+  lines.push("\\raggedbottom");
   lines.push("\\pagestyle{empty}");
-  lines.push("\\setlength{\\parindent}{0pt}");
+  lines.push("\\setlength{\\tabcolsep}{0in}");
+  lines.push("\\newcommand{\\isep}{-2 pt}");
+  lines.push("\\newcommand{\\lsep}{-0.5cm}");
+  lines.push("\\newcommand{\\psep}{-0.6cm}");
+  lines.push("\\renewcommand{\\labelitemii}{$\\circ$}");
+  lines.push("\\newcommand{\\resitem}[1]{\\item #1 \\vspace{-2pt}}");
   lines.push(
-    "\\newcommand{\\resheading}[1]{{\\setlength{\\fboxsep}{2pt}\\colorbox{lightgray!60}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep}{\\textbf{#1}}}}}",
+    "\\newcommand{\\resheading}[1]{{\\small\\colorbox{mygrey}{\\begin{minipage}{0.99\\textwidth}\\textbf{#1 \\vphantom{p\\^{E}}}\\end{minipage}}}}",
   );
   lines.push("");
   lines.push("\\begin{document}");
@@ -57,68 +75,76 @@ export function generateLatex(resume: StructuredResume): string {
   const fullName = escTex(resume.contact.full_name);
 
   lines.push(
-    "\\begin{tabular}{p{1.6cm} p{9cm} p{6.5cm}}",
+    "\\begin{tabular}{ l @{\\hskip 0.3in} l @{\\hskip 1.5in} l }",
   );
   lines.push(
-    "\\includegraphics[width=1.6cm]{iitdh-logo} &",
+    "\\multirow{4}{*}{\\includegraphics[width=2cm]{iitdh-logo}}",
   );
   lines.push(
-    `\\textbf{\\large ${fullName}} \\newline \\textbf{CSE (Computer Science \\& Engineering)} &`,
+    `& \\textbf{${fullName}} & \\textbf{\\faEnvelope[regular]\\ ${email}} \\\\`,
   );
-  const rightLines: string[] = [];
-  rightLines.push(`\\textit{Email:} ${email}`);
-  rightLines.push(`\\textit{Phone:} ${phone}`);
-  if (github)
-    rightLines.push(`\\href{${github}}{GitHub Profile}`);
-  if (linkedin)
-    rightLines.push(`\\href{${linkedin}}{LinkedIn Profile}`);
-  lines.push(rightLines.join(" \\newline "));
+  lines.push(
+    `& \\textbf{CSE (Computer Science \\& Engineering)} & \\textbf{\\faPhone\\ ${phone}} \\\\`,
+  );
+  lines.push(
+    `& \\textbf{\\href{${github}}{\\faGithub\\ GitHub}} & \\textbf{\\href{${linkedin}}{\\faLinkedin\\ LinkedIn}} \\\\`,
+  );
   lines.push("\\end{tabular}");
+  lines.push("\\vspace{0.35cm}");
   lines.push("");
-  lines.push("\\vspace{4pt}");
 
   // EDUCATION
-  lines.push("\\begin{tabularx}{\\linewidth}{l l X l l}");
-  lines.push("\\toprule");
+  lines.push("\\hspace*{-1cm}");
+  lines.push("\\indent");
+  lines.push(
+    "\\begin{tabular}{ l @{\\hskip 0.35in} l @{\\hskip 0.45in} l @{\\hskip 0.25in} l @{\\hskip 0.25in} l }",
+  );
+  lines.push("\\hline");
   lines.push(
     "\\textbf{Examination} & \\textbf{University} & \\textbf{Institute} & \\textbf{Year} & \\textbf{CGPA} \\\\",
   );
-  lines.push("\\midrule");
+  lines.push("\\hline");
   for (const row of resume.education) {
     lines.push(
       `${escTex(row.examination)} & ${escTex(row.university)} & ${escTex(row.institute)} & ${row.year} & ${escTex(row.cgpa)} \\\\`,
     );
   }
-  lines.push("\\bottomrule");
-  lines.push("\\end{tabularx}");
+  lines.push("\\hline");
+  lines.push("\\end{tabular}");
+  lines.push("\\vspace{0.25cm}");
   lines.push("");
 
   // TECHNICAL SKILLS
-  lines.push("\\resheading{TECHNICAL SKILLS}");
-  lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+  lines.push("\\noindent");
+  lines.push(
+    "\\resheading{\\textbf{\\large TECHNICAL SKILLS}}\\\\[\\lsep] \\\\",
+  );
+  lines.push("\\begin{itemize}[noitemsep,nolistsep]");
   for (const [cat, skills] of Object.entries(resume.skill_categories)) {
     lines.push(`\\item \\textbf{${escTex(cat)}}: ${escTex(skills)}`);
   }
   lines.push("\\end{itemize}");
+  lines.push("\\vspace{0.15cm}");
   lines.push("");
 
-  // PERSONAL PROJECTS
-  if (resume.personal_projects.length > 0) {
-    lines.push("\\resheading{PERSONAL PROJECTS}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
-    for (const p of resume.personal_projects) {
+  // WORK EXPERIENCE
+  if (resume.work_experience.length > 0) {
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large WORK EXPERIENCE}}\\\\[\\lsep] \\\\[-0.4cm]",
+    );
+    lines.push("\\begin{itemize}");
+    for (const e of resume.work_experience) {
       lines.push(
-        `\\item \\textbf{${escTex(p.name)}} \\hfill \\textit{${escTex(p.tech_stack)}}`,
+        `\\item \\textbf{${escTex(e.company)} (${escTex(e.role)})} \\hfill \\emph{(${escTex(e.duration)})}`,
       );
-      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
-      for (const b of p.bullets) {
-        lines.push(`  \\item ${escTex(b)}`);
+      if (e.guide) {
+        lines.push(`\\\\ (Guide: \\textit{${escTex(e.guide)}})`);
       }
-      if (p.live_url) {
-        lines.push(`  \\item \\textit{Live:} \\href{${p.live_url}}{${escTex(p.live_url)}}`);
-      }
-      if (p.repo_url) {
-        lines.push(`  \\item \\textit{Repo:} \\href{${p.repo_url}}{${escTex(p.repo_url)}}`);
+      lines.push("\\vspace{-0.1cm}");
+      lines.push("\\begin{itemize}[noitemsep,nolistsep]");
+      for (const b of e.bullets) {
+        lines.push(`\\item ${escTex(b)}`);
       }
       lines.push("\\end{itemize}");
     }
@@ -126,20 +152,27 @@ export function generateLatex(resume: StructuredResume): string {
     lines.push("");
   }
 
-  // WORK EXPERIENCE
-  if (resume.work_experience.length > 0) {
-    lines.push("\\resheading{WORK EXPERIENCE}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
-    for (const e of resume.work_experience) {
+  // PERSONAL PROJECTS
+  if (resume.personal_projects.length > 0) {
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large PERSONAL PROJECTS}}\\\\[\\lsep] \\\\[-0.4cm]",
+    );
+    lines.push("\\begin{itemize}");
+    for (const p of resume.personal_projects) {
       lines.push(
-        `\\item \\textbf{${escTex(e.company)} (${escTex(e.role)})} \\hfill \\textit{${escTex(e.duration)}}`,
+        `\\item \\textbf{${escTex(p.name)}} \\hfill \\emph{${escTex(p.tech_stack)}}`,
       );
-      if (e.guide) {
-        lines.push(`\\\\ \\textit{Guide: \\textbf{${escTex(e.guide)}}}`);
+      lines.push("\\vspace{-0.1cm}");
+      lines.push("\\begin{itemize}[noitemsep,nolistsep]");
+      for (const b of p.bullets) {
+        lines.push(`\\item ${escTex(b)}`);
       }
-      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
-      for (const b of e.bullets) {
-        lines.push(`  \\item ${escTex(b)}`);
+      if (p.live_url) {
+        lines.push(`\\item \\textbf{Live:} \\href{${p.live_url}}{${escTex(p.live_url)}}`);
+      }
+      if (p.repo_url) {
+        lines.push(`\\item \\textbf{Repo:} \\href{${p.repo_url}}{\\texttt{${escTex(p.repo_url)}}}`);
       }
       lines.push("\\end{itemize}");
     }
@@ -149,19 +182,29 @@ export function generateLatex(resume: StructuredResume): string {
 
   // ACADEMIC PROJECTS
   if (resume.academic_projects.length > 0) {
-    lines.push("\\resheading{ACADEMIC PROJECTS}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large ACADEMIC PROJECTS}}\\\\[\\lsep] \\\\[-0.4cm]",
+    );
+    lines.push("\\begin{itemize}");
     for (const p of resume.academic_projects) {
-      const ctx = p.context ? ` ~~ ${escTex(p.context)}` : "";
-      lines.push(
-        `\\item \\textbf{${escTex(p.name)}}${ctx} \\hfill \\textit{${escTex(p.tech_stack)}}`,
-      );
-      if (p.guide) {
-        lines.push(`\\\\ \\textit{(Guide: \\textbf{${escTex(p.guide)}})}`);
+      if (p.context) {
+        lines.push(
+          `\\item \\textbf{${escTex(p.name)}} \\hfill \\emph{${escTex(p.context)}}`,
+        );
+        lines.push(`\\\\ \\hfill \\emph{${escTex(p.tech_stack)}}`);
+      } else {
+        lines.push(
+          `\\item \\textbf{${escTex(p.name)}} \\hfill \\emph{${escTex(p.tech_stack)}}`,
+        );
       }
-      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
+      if (p.guide) {
+        lines.push(`\\\\ (Guide: \\textbf{${escTex(p.guide)}})`);
+      }
+      lines.push("\\vspace{-0.1cm}");
+      lines.push("\\begin{itemize}[noitemsep,nolistsep]");
       for (const b of p.bullets) {
-        lines.push(`  \\item ${escTex(b)}`);
+        lines.push(`\\item ${escTex(b)}`);
       }
       lines.push("\\end{itemize}");
     }
@@ -171,32 +214,53 @@ export function generateLatex(resume: StructuredResume): string {
 
   // PUBLICATIONS
   if (resume.publications.length > 0) {
-    lines.push("\\resheading{PUBLICATIONS}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large PUBLICATIONS}}\\\\[\\lsep] \\\\[-0.1cm]",
+    );
+    lines.push("\\begin{itemize}[noitemsep,nolistsep]");
     for (const pub of resume.publications) {
       lines.push(`\\item ${escTex(pub)}`);
     }
     lines.push("\\end{itemize}");
+    lines.push("\\vspace{0.1cm}");
     lines.push("");
   }
 
   // POSITIONS
   if (resume.positions.length > 0) {
-    lines.push("\\resheading{POSITIONS OF RESPONSIBILITY}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large POSITIONS OF RESPONSIBILITY}}\\\\[\\lsep] \\\\",
+    );
+    lines.push("\\begin{itemize}[noitemsep,nolistsep]");
     for (const pos of resume.positions) {
-      lines.push(`\\item ${escTex(pos)}`);
+      const { bold, rest } = splitBoldRest(pos);
+      if (rest) {
+        lines.push(`\\item \\textbf{${escTex(bold)}} -- ${escTex(rest)}`);
+      } else {
+        lines.push(`\\item \\textbf{${escTex(bold)}}`);
+      }
     }
     lines.push("\\end{itemize}");
+    lines.push("\\vspace{0.2cm}");
     lines.push("");
   }
 
   // ACHIEVEMENTS
   if (resume.achievements.length > 0) {
-    lines.push("\\resheading{ACHIEVEMENTS \\& ACTIVITIES}");
-    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    lines.push("\\noindent");
+    lines.push(
+      "\\resheading{\\textbf{\\large ACHIEVEMENTS \\& ACTIVITIES}}\\\\[\\lsep] \\\\[-0.1cm]",
+    );
+    lines.push("\\begin{itemize}[noitemsep,nolistsep]");
     for (const ach of resume.achievements) {
-      lines.push(`\\item ${escTex(ach)}`);
+      const { bold, rest } = splitBoldRest(ach);
+      if (rest) {
+        lines.push(`\\item \\textbf{${escTex(bold)}} -- ${escTex(rest)}`);
+      } else {
+        lines.push(`\\item \\textbf{${escTex(bold)}}`);
+      }
     }
     lines.push("\\end{itemize}");
     lines.push("");
@@ -508,10 +572,11 @@ export default function StructuredResumePreview({ resume }: Props) {
           body * { visibility: hidden !important; }
           #resume-document {
             visibility: visible !important;
-            position: fixed !important;
+            position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            width: 100% !important;
+            width: 210mm !important;
+            min-height: auto !important;
             margin: 0 !important;
             padding: 14mm !important;
             box-shadow: none !important;
