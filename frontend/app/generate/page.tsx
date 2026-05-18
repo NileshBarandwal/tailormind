@@ -170,7 +170,9 @@ export default function GeneratePage() {
             />
           </label>
           <label className="text-sm">
-            <span className="block text-slate-700">Company website</span>
+            <span className="block text-slate-700">
+              Company website (optional)
+            </span>
             <input
               type="text"
               value={website}

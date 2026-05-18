@@ -77,25 +77,48 @@ def _prepare_context(req) -> tuple:
     profile = _load_profile(req.profile_id)
     try:
         parsed_jd = _jd_parser.parse(req.jd_text)
-    except ValueError as exc:
+    except Exception as exc:
         raise HTTPException(
             status_code=400, detail=f"JD parsing failed: {exc}"
         )
-    try:
-        research = _company_researcher.research(req.company_name, req.website)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Company research failed: {exc}. "
-                f"The website '{req.website}' could not be scraped. "
-                f"Please verify the URL is correct and publicly accessible."
-            ),
+
+    research = None
+    if req.website and req.website.strip():
+        try:
+            research = _company_researcher.research(
+                req.company_name, req.website
+            )
+        except Exception as exc:
+            print(
+                f"[generate] company research failed, "
+                f"continuing without it: {exc}"
+            )
+            research = None
+
+    if research is None:
+        from datetime import datetime, timezone
+
+        from backend.models.schemas import CompanyBrief, ResearchReport
+
+        brief = CompanyBrief(
+            company_name=req.company_name,
+            website=req.website or "",
+            mission="",
+            tech_stack=[],
+            culture_signals=[],
+            recent_news=[],
+            funding_stage="unknown",
+            employee_count="unknown",
+            scraped_urls=[],
+            researched_at=datetime.now(timezone.utc),
         )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=400, detail=f"Company research error: {exc}"
+        research = ResearchReport(
+            company_brief=brief,
+            raw_chunks=[],
+            chunk_ids=[],
+            collection_name="",
         )
+
     try:
         match = _profile_matcher.match(profile, parsed_jd)
     except Exception as exc:

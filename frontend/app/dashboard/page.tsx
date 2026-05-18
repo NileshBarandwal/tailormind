@@ -42,14 +42,22 @@ const ROLE_PRESETS = [
   "Agent Engineer",
   "RAG Engineer",
   "Prompt Engineer",
+  "LLM Engineer",
   "Forward Deployed",
-  "Web3 Engineer",
-  "Full Stack AI",
   "MLOps Engineer",
   "Context Engineer",
   "ZK Engineer",
-  "Smart Contract",
+  "Blockchain Engineer",
+  "Smart Contract Developer",
+  "Web3 Engineer",
+  "DeFi Engineer",
+  "Protocol Engineer",
+  "Full Stack Engineer",
+  "Backend Engineer",
+  "Frontend Engineer",
+  "SDE",
   "Developer Relations",
+  "AI Research Engineer",
 ];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -684,7 +692,9 @@ export default function DashboardPage() {
               />
             </label>
             <label className="text-sm">
-              <span className="block text-slate-700">Company website</span>
+              <span className="block text-slate-700">
+                Company website (optional — used for deeper research)
+              </span>
               <input
                 type="text"
                 value={website}
@@ -697,7 +707,7 @@ export default function DashboardPage() {
               />
               {companySearchUrl && !website && (
                 <p className="text-xs text-slate-500 mt-1">
-                  Website needed for company research.{" "}
+                  Add website for deeper company research (optional).{" "}
                   <a
                     href={companySearchUrl}
                     target="_blank"

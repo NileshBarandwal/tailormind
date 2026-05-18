@@ -56,6 +56,7 @@ class JobDiscovery:
             return []
 
     def _fetch_remotive(self, query: str) -> list[dict]:
+        results = []
         try:
             response = httpx.get(
                 REMOTIVE_URL,
@@ -63,10 +64,36 @@ class JobDiscovery:
                 timeout=20,
             )
             response.raise_for_status()
-            return response.json().get("jobs", []) or []
+            results = response.json().get("jobs", []) or []
         except Exception as exc:
             print(f"[job_discovery] remotive fetch failed: {exc}")
-            return []
+
+        web3_keywords = [
+            "blockchain", "web3", "solidity", "defi",
+            "crypto", "zkp", "zk engineer", "protocol",
+        ]
+        query_lower = query.lower()
+        is_web3_query = any(k in query_lower for k in web3_keywords)
+
+        if is_web3_query and len(results) < 5:
+            try:
+                response2 = httpx.get(
+                    REMOTIVE_URL,
+                    params={"search": "blockchain developer", "limit": 20},
+                    timeout=20,
+                )
+                response2.raise_for_status()
+                extra = response2.json().get("jobs", []) or []
+                existing_ids = {str(r.get("id")) for r in results}
+                for job in extra:
+                    if str(job.get("id")) not in existing_ids:
+                        results.append(job)
+            except Exception as exc:
+                print(
+                    f"[job_discovery] remotive web3 fallback failed: {exc}"
+                )
+
+        return results
 
     def _fetch_wellfound(self, query: str) -> list[dict]:
         """Wellfound (AngelList) has no public API. Placeholder for a
