@@ -136,10 +136,16 @@ export interface GenerationErrorEvent {
   message: string;
 }
 
+export interface GenerationWarningEvent {
+  type: "warning";
+  message: string;
+}
+
 export type GenerationEvent =
   | GenerationProgressEvent
   | GenerationDoneEvent
-  | GenerationErrorEvent;
+  | GenerationErrorEvent
+  | GenerationWarningEvent;
 
 export async function generateStructuredResumeStream(
   profileId: string,

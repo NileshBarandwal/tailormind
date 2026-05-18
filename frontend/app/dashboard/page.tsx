@@ -44,7 +44,10 @@ import InstructionPanel from "@/components/InstructionPanel";
 import JobCard from "@/components/JobCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MatchScoreCard from "@/components/MatchScoreCard";
-import GenerationProgress from "@/components/GenerationProgress";
+import GenerationProgress, {
+  type ProgressStep,
+} from "@/components/GenerationProgress";
+import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 
@@ -125,11 +128,6 @@ export default function DashboardPage() {
     "Matching your profile...",
     "Generating resume...",
   ];
-
-  type ProgressStep = {
-    label: string;
-    status: "waiting" | "active" | "done";
-  };
 
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>(
     GENERATION_STEPS.map((label) => ({
@@ -385,7 +383,6 @@ export default function DashboardPage() {
     if (!selectedJob) return;
     setStructuredLoading(true);
     setStructuredError("");
-    setStructuredResume(null);
     setProgressSteps(
       GENERATION_STEPS.map((label) => ({ label, status: "waiting" as const })),
     );
@@ -419,6 +416,16 @@ export default function DashboardPage() {
             }
           } else if (event.type === "error") {
             setStructuredError(event.message);
+            // Mark the currently active step as failed
+            setProgressSteps((prev) =>
+              prev.map((s) => ({
+                ...s,
+                status: s.status === "active" ? "failed" : s.status,
+              })),
+            );
+          } else if (event.type === "warning") {
+            // Non-fatal: show as yellow note, do not stop progress
+            setStructuredError("⚠ " + event.message);
           }
         },
       );
@@ -887,7 +894,22 @@ export default function DashboardPage() {
               >
                 {resumeLoading ? "Generating..." : "Generate Resume"}
               </button>
-              {resumeError && <p className="text-xs text-red-600">{resumeError}</p>}
+              {resumeError && (() => {
+                const ei = classifyError(resumeError);
+                return (
+                  <div className="mt-1 text-xs">
+                    <span className="text-red-600">{ei.message} {ei.hint}</span>
+                    {ei.canRetry && (
+                      <button
+                        onClick={handleGenerateResume}
+                        className="ml-2 text-red-600 underline font-medium"
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-1">
               <button
@@ -898,9 +920,22 @@ export default function DashboardPage() {
               >
                 {letterLoading ? "Generating..." : "Generate Cover Letter"}
               </button>
-              {coverLetterError && (
-                <p className="text-xs text-red-600">{coverLetterError}</p>
-              )}
+              {coverLetterError && (() => {
+                const ei = classifyError(coverLetterError);
+                return (
+                  <div className="mt-1 text-xs">
+                    <span className="text-red-600">{ei.message} {ei.hint}</span>
+                    {ei.canRetry && (
+                      <button
+                        onClick={handleGenerateCoverLetter}
+                        className="ml-2 text-red-600 underline font-medium"
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-1">
               <button
@@ -911,7 +946,22 @@ export default function DashboardPage() {
               >
                 {cardLoading ? "Generating..." : "Generate Card"}
               </button>
-              {cardError && <p className="text-xs text-red-600">{cardError}</p>}
+              {cardError && (() => {
+                const ei = classifyError(cardError);
+                return (
+                  <div className="mt-1 text-xs">
+                    <span className="text-red-600">{ei.message} {ei.hint}</span>
+                    {ei.canRetry && (
+                      <button
+                        onClick={handleGenerateCard}
+                        className="ml-2 text-red-600 underline font-medium"
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -966,6 +1016,7 @@ export default function DashboardPage() {
             <GenerationProgress
               steps={progressSteps}
               error={structuredError}
+              onRetry={handleGenerateStructuredResume}
             />
           )}
           {structuredResume && (

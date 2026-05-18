@@ -386,6 +386,10 @@ def generate_structured_resume_stream(
                         request.company_name, request.website)
                 except Exception as exc:
                     print(f"[stream] research skipped: {exc}")
+                    yield emit({
+                        "type": "warning",
+                        "message": "Company research unavailable. Generating without company context.",
+                    })
             if research is None:
                 from datetime import datetime, timezone
                 from backend.models.schemas import CompanyBrief, ResearchReport
