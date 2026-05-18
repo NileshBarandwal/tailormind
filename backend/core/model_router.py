@@ -22,6 +22,9 @@ TASK_MODEL_MAP: dict[str, str] = {
 
 FALLBACK_MODEL_MAP: dict[str, str] = {
     "groq/llama-3.3-70b-versatile": "gemini/gemini-2.5-flash-lite",
+    "gemini/gemini-2.5-flash-lite": "gemini/gemini-2.0-flash",
+    "gemini/gemini-2.0-flash": "groq/llama-3.1-8b-instant",
+    "groq/llama-3.1-8b-instant": "groq/mixtral-8x7b-32768",
     "groq/qwen/qwen3-32b": "gemini/gemini-2.5-flash-lite",
     "openrouter/deepseek/deepseek-chat": "groq/llama-3.3-70b-versatile",
 }
@@ -57,20 +60,23 @@ class ModelRouter:
         if response_format is not None:
             kwargs["response_format"] = response_format
 
-        try:
-            response = litellm.completion(**kwargs)
-        except RateLimitError:
-            fallback = FALLBACK_MODEL_MAP.get(model)
-            if fallback:
-                print(
-                    f"[model_router] Groq rate limit hit for {model}, "
-                    f"falling back to {fallback}"
-                )
-                kwargs["model"] = fallback
+        visited: set[str] = set()
+        response = None
+        while True:
+            visited.add(model)
+            kwargs["model"] = model
+            try:
                 response = litellm.completion(**kwargs)
-                model = fallback
-            else:
-                raise
+                break
+            except RateLimitError:
+                next_model = FALLBACK_MODEL_MAP.get(model)
+                if not next_model or next_model in visited:
+                    raise
+                print(
+                    f"[model_router] rate limit hit for {model}, "
+                    f"falling back to {next_model}"
+                )
+                model = next_model
 
         content = response["choices"][0]["message"]["content"]
 
