@@ -373,7 +373,7 @@ export default function StructuredResumePreview({ resume }: Props) {
           <tbody>
             <tr>
               <td style={{
-                width: "2cm", verticalAlign: "middle", paddingRight: 8
+                width: "1.7cm", verticalAlign: "middle", paddingRight: 4
               }}>
                 <img
                   src="/iitdh-logo.png"
@@ -390,7 +390,7 @@ export default function StructuredResumePreview({ resume }: Props) {
                   }}
                 />
               </td>
-              <td style={{ verticalAlign: "middle", paddingLeft: 8 }}>
+              <td style={{ verticalAlign: "middle", paddingLeft: 4 }}>
                 <div style={{ fontWeight: "bold", fontSize: "12pt" }}>
                   {resume.contact.full_name}
                 </div>
@@ -418,7 +418,7 @@ export default function StructuredResumePreview({ resume }: Props) {
         <table style={{
           width: "100%",
           borderCollapse: "collapse",
-          marginBottom: 6,
+          marginBottom: 2,
           fontSize: "10pt",
         }}>
           <thead>
@@ -576,7 +576,9 @@ export default function StructuredResumePreview({ resume }: Props) {
             top: 0 !important;
             left: 0 !important;
             width: 210mm !important;
+            box-sizing: border-box !important;
             min-height: auto !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 14mm !important;
             box-shadow: none !important;
@@ -706,9 +708,11 @@ const PAGE: React.CSSProperties = {
   lineHeight: 1.3,
   color: "#000",
   backgroundColor: "#fff",
+  width: "210mm",
   maxWidth: "210mm",
   margin: "0 auto",
   padding: "14mm",
+  boxSizing: "border-box",
   boxShadow: "0 0 8px rgba(0,0,0,0.15)",
 };
 
@@ -726,7 +730,7 @@ const EDU_TD: React.CSSProperties = {
 const LIST: React.CSSProperties = {
   listStyle: "none",
   margin: 0,
-  padding: "0 0 4px 8px",
+  padding: "0 0 2px 8px",
 };
 
 const LI: React.CSSProperties = {
