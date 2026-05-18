@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type {
   StructuredProject,
   StructuredExperience,
@@ -10,29 +10,295 @@ interface Props {
   resume: StructuredResume;
 }
 
+function escTex(s: string): string {
+  if (!s) return "";
+  return s
+    .replace(/\\/g, "\\textbackslash{}")
+    .replace(/&/g, "\\&")
+    .replace(/%/g, "\\%")
+    .replace(/#/g, "\\#")
+    .replace(/_/g, "\\_")
+    .replace(/\$/g, "\\$")
+    .replace(/\^/g, "\\^{}")
+    .replace(/~/g, "\\~{}")
+    .replace(/\{/g, "\\{")
+    .replace(/\}/g, "\\}");
+}
+
+export function generateLatex(resume: StructuredResume): string {
+  const lines: string[] = [];
+
+  lines.push("\\documentclass[a4paper,10pt]{article}");
+  lines.push(
+    "\\usepackage[top=16mm,bottom=16mm,left=14mm,right=14mm]{geometry}",
+  );
+  lines.push("\\usepackage{palatino}");
+  lines.push("\\usepackage[T1]{fontenc}");
+  lines.push("\\usepackage{enumitem}");
+  lines.push("\\usepackage{hyperref}");
+  lines.push("\\usepackage{graphicx}");
+  lines.push("\\usepackage{tabularx}");
+  lines.push("\\usepackage{booktabs}");
+  lines.push("\\usepackage{xcolor}");
+  lines.push("\\pagestyle{empty}");
+  lines.push("\\setlength{\\parindent}{0pt}");
+  lines.push(
+    "\\newcommand{\\resheading}[1]{{\\setlength{\\fboxsep}{2pt}\\colorbox{lightgray!60}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep}{\\textbf{#1}}}}}",
+  );
+  lines.push("");
+  lines.push("\\begin{document}");
+  lines.push("");
+
+  // HEADER
+  const email = escTex(resume.contact.iit_email || resume.contact.email);
+  const phone = escTex(resume.contact.phone);
+  const github = resume.contact.github_url;
+  const linkedin = resume.contact.linkedin_url;
+  const fullName = escTex(resume.contact.full_name);
+
+  lines.push(
+    "\\begin{tabular}{p{1.6cm} p{9cm} p{6.5cm}}",
+  );
+  lines.push(
+    "\\includegraphics[width=1.6cm]{iitdh-logo} &",
+  );
+  lines.push(
+    `\\textbf{\\large ${fullName}} \\newline \\textbf{CSE (Computer Science \\& Engineering)} &`,
+  );
+  const rightLines: string[] = [];
+  rightLines.push(`\\textit{Email:} ${email}`);
+  rightLines.push(`\\textit{Phone:} ${phone}`);
+  if (github)
+    rightLines.push(`\\href{${github}}{GitHub Profile}`);
+  if (linkedin)
+    rightLines.push(`\\href{${linkedin}}{LinkedIn Profile}`);
+  lines.push(rightLines.join(" \\newline "));
+  lines.push("\\end{tabular}");
+  lines.push("");
+  lines.push("\\vspace{4pt}");
+
+  // EDUCATION
+  lines.push("\\begin{tabularx}{\\linewidth}{l l X l l}");
+  lines.push("\\toprule");
+  lines.push(
+    "\\textbf{Examination} & \\textbf{University} & \\textbf{Institute} & \\textbf{Year} & \\textbf{CGPA} \\\\",
+  );
+  lines.push("\\midrule");
+  for (const row of resume.education) {
+    lines.push(
+      `${escTex(row.examination)} & ${escTex(row.university)} & ${escTex(row.institute)} & ${row.year} & ${escTex(row.cgpa)} \\\\`,
+    );
+  }
+  lines.push("\\bottomrule");
+  lines.push("\\end{tabularx}");
+  lines.push("");
+
+  // TECHNICAL SKILLS
+  lines.push("\\resheading{TECHNICAL SKILLS}");
+  lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+  for (const [cat, skills] of Object.entries(resume.skill_categories)) {
+    lines.push(`\\item \\textbf{${escTex(cat)}}: ${escTex(skills)}`);
+  }
+  lines.push("\\end{itemize}");
+  lines.push("");
+
+  // PERSONAL PROJECTS
+  if (resume.personal_projects.length > 0) {
+    lines.push("\\resheading{PERSONAL PROJECTS}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const p of resume.personal_projects) {
+      lines.push(
+        `\\item \\textbf{${escTex(p.name)}} \\hfill \\textit{${escTex(p.tech_stack)}}`,
+      );
+      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
+      for (const b of p.bullets) {
+        lines.push(`  \\item ${escTex(b)}`);
+      }
+      if (p.live_url) {
+        lines.push(`  \\item \\textit{Live:} \\href{${p.live_url}}{${escTex(p.live_url)}}`);
+      }
+      if (p.repo_url) {
+        lines.push(`  \\item \\textit{Repo:} \\href{${p.repo_url}}{${escTex(p.repo_url)}}`);
+      }
+      lines.push("\\end{itemize}");
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  // WORK EXPERIENCE
+  if (resume.work_experience.length > 0) {
+    lines.push("\\resheading{WORK EXPERIENCE}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const e of resume.work_experience) {
+      lines.push(
+        `\\item \\textbf{${escTex(e.company)} (${escTex(e.role)})} \\hfill \\textit{${escTex(e.duration)}}`,
+      );
+      if (e.guide) {
+        lines.push(`\\\\ \\textit{Guide: \\textbf{${escTex(e.guide)}}}`);
+      }
+      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
+      for (const b of e.bullets) {
+        lines.push(`  \\item ${escTex(b)}`);
+      }
+      lines.push("\\end{itemize}");
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  // ACADEMIC PROJECTS
+  if (resume.academic_projects.length > 0) {
+    lines.push("\\resheading{ACADEMIC PROJECTS}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const p of resume.academic_projects) {
+      const ctx = p.context ? ` ~~ ${escTex(p.context)}` : "";
+      lines.push(
+        `\\item \\textbf{${escTex(p.name)}}${ctx} \\hfill \\textit{${escTex(p.tech_stack)}}`,
+      );
+      if (p.guide) {
+        lines.push(`\\\\ \\textit{(Guide: \\textbf{${escTex(p.guide)}})}`);
+      }
+      lines.push("\\begin{itemize}[label=$\\circ$,leftmargin=*,noitemsep,topsep=1pt]");
+      for (const b of p.bullets) {
+        lines.push(`  \\item ${escTex(b)}`);
+      }
+      lines.push("\\end{itemize}");
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  // PUBLICATIONS
+  if (resume.publications.length > 0) {
+    lines.push("\\resheading{PUBLICATIONS}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const pub of resume.publications) {
+      lines.push(`\\item ${escTex(pub)}`);
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  // POSITIONS
+  if (resume.positions.length > 0) {
+    lines.push("\\resheading{POSITIONS OF RESPONSIBILITY}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const pos of resume.positions) {
+      lines.push(`\\item ${escTex(pos)}`);
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  // ACHIEVEMENTS
+  if (resume.achievements.length > 0) {
+    lines.push("\\resheading{ACHIEVEMENTS \\& ACTIVITIES}");
+    lines.push("\\begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]");
+    for (const ach of resume.achievements) {
+      lines.push(`\\item ${escTex(ach)}`);
+    }
+    lines.push("\\end{itemize}");
+    lines.push("");
+  }
+
+  lines.push("\\end{document}");
+  return lines.join("\n");
+}
+
 export default function StructuredResumePreview({ resume }: Props) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<"preview" | "latex">("preview");
+  const [latexCode, setLatexCode] = useState("");
+  const [copied, setCopied] = useState(false);
 
   function handlePrint() {
     window.print();
   }
 
+  function handleTabChange(tab: "preview" | "latex") {
+    setActiveTab(tab);
+    if (tab === "latex" && !latexCode) {
+      setLatexCode(generateLatex(resume));
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(latexCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleOpenOverleaf() {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "https://www.overleaf.com/docs";
+    form.target = "_blank";
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "snip";
+    input.value = latexCode || generateLatex(resume);
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
+
   return (
     <>
-      <div className="no-print mb-4 flex items-center gap-3">
-        <button
-          onClick={handlePrint}
-          className="rounded bg-slate-900 px-4 py-2 text-sm
-            font-medium text-white hover:bg-slate-700"
-        >
-          Export as PDF
-        </button>
-        <p className="text-xs text-slate-500">
-          Press Cmd+P / Ctrl+P → Save as PDF.
-          What you see is exactly what you get.
-        </p>
+      <div className="no-print mb-3">
+        <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #e2e8f0", marginBottom: 12 }}>
+          {(["preview", "latex"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              style={{
+                padding: "8px 16px",
+                fontSize: 14,
+                fontWeight: 500,
+                border: "none",
+                borderBottom: activeTab === tab ? "2px solid #0f172a" : "2px solid transparent",
+                background: "none",
+                cursor: "pointer",
+                color: activeTab === tab ? "#0f172a" : "#94a3b8",
+              }}
+            >
+              {tab === "preview" ? "Preview" : "LaTeX"}
+            </button>
+          ))}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, paddingBottom: 4 }}>
+            {activeTab === "preview" && (
+              <>
+                <button
+                  onClick={handlePrint}
+                  style={{ background: "#0f172a", color: "white", border: "none", borderRadius: 4, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
+                >
+                  Export PDF
+                </button>
+                <span style={{ fontSize: 12, color: "#94a3b8", alignSelf: "center" }}>Cmd+P → Save as PDF</span>
+              </>
+            )}
+            {activeTab === "latex" && (
+              <>
+                <button
+                  onClick={handleCopy}
+                  style={{ background: "white", color: "#374151", border: "1px solid #d1d5db", borderRadius: 4, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button
+                  onClick={handleOpenOverleaf}
+                  style={{ background: "#4cae4f", color: "white", border: "none", borderRadius: 4, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
+                >
+                  Open in Overleaf
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
+      {activeTab === "preview" && (
       <div id="resume-print-root">
       <div ref={printRef} id="resume-document" style={PAGE}>
 
@@ -206,21 +472,52 @@ export default function StructuredResumePreview({ resume }: Props) {
         )}
 
       </div>
-      </div> {/* resume-print-root */}
+      </div>
+      )}
+
+      {activeTab === "latex" && (
+        <div style={{ borderRadius: 6, border: "1px solid #30363d", background: "#0d1117", padding: 16 }}>
+          <textarea
+            value={latexCode}
+            onChange={(e) => setLatexCode(e.target.value)}
+            spellCheck={false}
+            style={{
+              width: "100%",
+              height: "70vh",
+              background: "transparent",
+              color: "#7ee787",
+              fontFamily: "'Fira Code', 'Courier New', monospace",
+              fontSize: 12,
+              resize: "none",
+              outline: "none",
+              border: "none",
+              lineHeight: 1.6,
+            }}
+          />
+        </div>
+      )}
 
       <style>{`
         @media print {
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { size: A4; margin: 14mm; }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            overflow: visible !important;
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          body > * { display: none !important; }
-          #resume-print-root { display: block !important; }
+          @page { size: A4; margin: 0; }
           .no-print { display: none !important; }
+          body * { visibility: hidden !important; }
+          #resume-document {
+            visibility: visible !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 14mm !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
+          #resume-document * { visibility: visible !important; }
         }
       `}</style>
     </>
