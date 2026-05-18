@@ -35,6 +35,7 @@ Rules:
 - For blockchain/web3 roles: prioritize AMM-DEX, BookMyHotel, Consensus Mechanisms thesis
 - For full stack/backend roles: prioritize TailorMind, Armatrix, Bolna
 - Always include all work_experience unless JD is highly specialized
+- skill_categories: ALWAYS return ALL available category names from the pool. Never filter skills.
 - jd_keywords_used: only keywords actually present in profile
 - Return JSON only, no preamble, no markdown
 """
@@ -52,6 +53,7 @@ STRICT RULES - these are absolute and non-negotiable:
 7. For full stack roles: emphasize end-to-end ownership, frontend + backend integration
 8. Keep bullets concise: 1-2 lines each
 9. Keep the original bullet if rewriting would make it worse
+10. ALWAYS include ALL bullets for each item. Never drop bullets. If the original has 4 bullets, the rewrite must have 4 bullets.
 
 Return strict JSON only:
 {

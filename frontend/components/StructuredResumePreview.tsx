@@ -45,13 +45,27 @@ export default function StructuredResumePreview({ resume }: Props) {
                 width: "2.4cm", verticalAlign: "middle", paddingRight: 8
               }}>
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/en/thumb/5/5b/IIT_Dharwad_logo.png/120px-IIT_Dharwad_logo.png"
+                  src="/iitdh-logo.png"
                   alt="IIT Dharwad"
                   style={{ width: "1.8cm", height: "auto" }}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
+                    const img = e.target as HTMLImageElement;
+                    if (!img.src.includes("drive.google")) {
+                      img.src =
+                        "https://drive.google.com/uc?export=download&id=1MDKqBdYk8ZrMdG9ykiGAvXLPGm_GTni3";
+                    } else {
+                      img.style.display = "none";
+                    }
                   }}
                 />
+                <div style={{
+                  fontSize: "7pt",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                  marginTop: 2,
+                }}>
+                  Indian Institute of Technology Dharwad
+                </div>
               </td>
               <td style={{ verticalAlign: "middle", paddingLeft: 8 }}>
                 <div style={{ fontWeight: "bold", fontSize: "12pt" }}>
@@ -112,14 +126,7 @@ export default function StructuredResumePreview({ resume }: Props) {
           </thead>
           <tbody>
             {resume.education.map((row, i) => (
-              <tr
-                key={i}
-                style={
-                  i === resume.education.length - 1
-                    ? { borderBottom: "1px solid #000" }
-                    : {}
-                }
-              >
+              <tr key={i} style={{ borderBottom: "1px solid #000" }}>
                 <td style={EDU_TD}>{row.examination}</td>
                 <td style={EDU_TD}>{row.university}</td>
                 <td style={EDU_TD}>{row.institute}</td>
@@ -165,9 +172,6 @@ export default function StructuredResumePreview({ resume }: Props) {
             </ul>
           </>
         )}
-
-        {/* PAGE BREAK */}
-        <div style={{ pageBreakAfter: "always" }} />
 
         {/* ACADEMIC PROJECTS */}
         {resume.academic_projects.length > 0 && (
@@ -221,6 +225,7 @@ export default function StructuredResumePreview({ resume }: Props) {
 
       <style>{`
         @media print {
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
           nav, header, aside, footer { display: none !important; }
           body * { visibility: hidden; }
@@ -235,6 +240,8 @@ export default function StructuredResumePreview({ resume }: Props) {
             border: none !important;
             max-width: 100% !important;
           }
+          section, li, tr { page-break-inside: avoid; }
+          h2, h3, .section-head { page-break-after: avoid; }
           @page { size: A4; margin: 14mm; }
         }
       `}</style>
@@ -244,13 +251,16 @@ export default function StructuredResumePreview({ resume }: Props) {
 
 function SecHead({ title }: { title: string }) {
   return (
-    <div style={{
-      backgroundColor: "#bfbfbf",
-      padding: "2px 4px",
-      marginTop: 6,
-      marginBottom: 2,
-    }}>
-      <span style={{ fontWeight: "bold", fontSize: "10pt" }}>
+    <div
+      className="section-head"
+      style={{
+        backgroundColor: "#999",
+        padding: "2px 4px",
+        marginTop: 6,
+        marginBottom: 2,
+      }}
+    >
+      <span style={{ fontWeight: "bold", fontSize: "10pt", color: "#000" }}>
         {title}
       </span>
     </div>
