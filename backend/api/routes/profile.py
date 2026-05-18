@@ -36,6 +36,17 @@ def save_profile(profile: UserProfile) -> dict[str, str]:
 def get_profile(profile_id: str) -> UserProfile:
     path = _profile_path(profile_id)
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Profile '{profile_id}' not found")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return UserProfile(**data)
+        raise HTTPException(
+            status_code=404, detail=f"Profile '{profile_id}' not found"
+        )
+    import json as _json
+
+    data = _json.loads(path.read_text(encoding="utf-8"))
+    from backend.api.routes.generate import _build_userprofile_from_pool
+
+    try:
+        return _build_userprofile_from_pool(data)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Profile format error: {exc}"
+        )

@@ -43,12 +43,123 @@ _application_card_generator = ApplicationCardGenerator()
 _structured_resume_gen = StructuredResumeGenerator()
 
 
+def _build_userprofile_from_pool(data: dict) -> UserProfile:
+    """
+    Convert the new knowledge pool profile format into a
+    UserProfile Pydantic object for use with legacy agents
+    (matcher, card generator, etc).
+    Handles both old format (institution/degree/field) and
+    new format (institute/examination/cgpa as string).
+    """
+    from datetime import datetime, timezone as _tz
+
+    from backend.models.schemas import Education, Experience, Project
+
+    exps = [
+        Experience(
+            company=e["company"],
+            role=e["role"],
+            duration=e["duration"],
+            description=e.get("bullets", []),
+            tech_used=[],
+        )
+        for e in data.get("work_experience", data.get("experiences", []))
+    ]
+
+    all_projects = (
+        data.get("projects", []) + data.get("academic_projects", [])
+    )
+    projs = [
+        Project(
+            name=p["name"],
+            description=(
+                p.get("bullets", [""])[0]
+                if p.get("bullets")
+                else p.get("description", "")
+            ),
+            tech_used=[
+                t.strip()
+                for t in p.get(
+                    "tech_stack",
+                    ",".join(p.get("tech_used", [])),
+                ).split(",")
+                if t.strip()
+            ],
+            highlights=p.get("bullets", [])[1:],
+            url=p.get("live_url", p.get("url", "")),
+        )
+        for p in all_projects
+    ]
+
+    edu_raw = data.get("education", [])
+    edus = []
+    for e in edu_raw:
+        if "examination" in e:
+            cgpa_str = e.get("cgpa", "0")
+            try:
+                cgpa_val = float(cgpa_str.replace("%", "").strip())
+            except (ValueError, AttributeError):
+                cgpa_val = 0.0
+            edus.append(
+                Education(
+                    institution=e.get("institute", ""),
+                    degree=e.get("examination", ""),
+                    field=e.get("field", "Computer Science"),
+                    year=e.get("year", 2026),
+                    cgpa=cgpa_val,
+                )
+            )
+        else:
+            edus.append(
+                Education(
+                    institution=e.get("institution", ""),
+                    degree=e.get("degree", ""),
+                    field=e.get("field", ""),
+                    year=e.get("year", 2026),
+                    cgpa=float(e.get("cgpa", 0) or 0),
+                )
+            )
+
+    return UserProfile(
+        full_name=data.get("full_name", ""),
+        email=data.get("email", ""),
+        phone=data.get("phone", ""),
+        summary=data.get("summary", ""),
+        skills=data.get("skills", []),
+        experiences=exps,
+        projects=projs,
+        education=edus,
+        certifications=data.get("certifications", []),
+        achievements=data.get("achievements", []),
+        preferences=data.get("preferences", {}),
+        created_at=datetime.fromisoformat(
+            data.get("created_at", "2026-01-01T00:00:00Z").replace(
+                "Z", "+00:00"
+            )
+        ),
+        updated_at=datetime.fromisoformat(
+            data.get("updated_at", "2026-01-01T00:00:00Z").replace(
+                "Z", "+00:00"
+            )
+        ),
+    )
+
+
 def _load_profile(profile_id: str) -> UserProfile:
     path = PROFILE_DIR / f"{profile_id}.json"
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Profile '{profile_id}' not found")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return UserProfile(**data)
+        raise HTTPException(
+            status_code=404, detail=f"Profile '{profile_id}' not found"
+        )
+    import json as _json
+
+    data = _json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return _build_userprofile_from_pool(data)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Profile format error: {exc}"
+        )
 
 
 def _load_profile_dict(profile_id: str) -> dict:
@@ -192,64 +303,7 @@ def generate_structured_resume_route(
     request: GenerateResumeRequest,
 ) -> StructuredResume:
     profile_dict = _load_profile_dict(request.profile_id)
-
-    from datetime import datetime, timezone as _tz
-
-    from backend.models.schemas import (
-        Education,
-        Experience,
-        Project,
-        UserProfile as _UP,
-    )
-
-    _exps = [
-        Experience(
-            company=e["company"],
-            role=e["role"],
-            duration=e["duration"],
-            description=e.get("bullets", []),
-            tech_used=[],
-        )
-        for e in profile_dict.get("work_experience", [])
-    ]
-    _projs = [
-        Project(
-            name=p["name"],
-            description=p.get("bullets", [""])[0] if p.get("bullets") else "",
-            tech_used=[t.strip() for t in p.get("tech_stack", "").split(",")],
-            highlights=p.get("bullets", [])[1:],
-            url=p.get("live_url", ""),
-        )
-        for p in (
-            profile_dict.get("projects", [])
-            + profile_dict.get("academic_projects", [])
-        )
-    ]
-    _edus = [
-        Education(
-            institution=e["institute"],
-            degree=e["examination"],
-            field=e.get("field", "Computer Science"),
-            year=e["year"],
-            cgpa=(
-                float(e["cgpa"].replace("%", ""))
-                if "%" not in e["cgpa"]
-                else 0.0
-            ),
-        )
-        for e in profile_dict.get("education", [])
-    ]
-    profile = _UP(
-        full_name=profile_dict["full_name"],
-        email=profile_dict["email"],
-        phone=profile_dict.get("phone", ""),
-        skills=profile_dict.get("skills", []),
-        experiences=_exps,
-        projects=_projs,
-        education=_edus,
-        created_at=datetime.now(_tz.utc),
-        updated_at=datetime.now(_tz.utc),
-    )
+    profile = _build_userprofile_from_pool(profile_dict)
 
     try:
         parsed_jd = _jd_parser.parse(request.jd_text)
