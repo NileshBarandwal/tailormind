@@ -567,22 +567,22 @@ export default function StructuredResumePreview({ resume }: Props) {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          @page { size: A4; margin: 0; }
+          @page { size: A4; margin: 14mm; }
           .no-print { display: none !important; }
           body * { visibility: hidden !important; }
           #resume-document {
             visibility: visible !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 210mm !important;
-            box-sizing: border-box !important;
-            min-height: auto !important;
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
             height: auto !important;
+            max-height: none !important;
+            box-sizing: border-box !important;
             margin: 0 !important;
-            padding: 14mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             background: white !important;
+            overflow: visible !important;
           }
           #resume-document * { visibility: visible !important; }
         }

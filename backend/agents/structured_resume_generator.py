@@ -56,9 +56,13 @@ STRICT RULES - these are absolute and non-negotiable:
 5. For AI/ML roles: emphasize ML methods, model performance, inference pipelines
 6. For blockchain roles: emphasize smart contracts, security, decentralization
 7. For full stack roles: emphasize end-to-end ownership, frontend + backend integration
-8. Each bullet must remain as a separate item. Never merge two bullets into one. Keep the original length and detail of each bullet.
+8. Each bullet must remain as a separate item. Never merge two bullets into one.
 9. Keep the original bullet if rewriting would make it worse
-10. ALWAYS include ALL bullets for each item. Never drop bullets. If the original has 4 bullets, the rewrite must have 4 bullets.
+10. BULLET BUDGET — strictly enforce these limits to keep the resume to 2 pages:
+    - Personal projects: return exactly 3 bullets maximum. If the original has 4, drop the least impactful one.
+    - Work experience: return exactly 3 bullets maximum. Keep the 3 most relevant to the target role.
+    - Academic projects: for the M.Tech thesis return exactly 4 bullets. For all other academic projects return exactly 2 bullets.
+    - Never exceed these limits under any circumstances.
 11. The rewritten bullet is a RESTATEMENT of the original, not an enhancement. Your job is better phrasing for the role, not adding new content. When in doubt, keep the original.
 
 Return strict JSON only:
@@ -159,6 +163,10 @@ class StructuredResumeGenerator:
             instructions,
         )
 
+        # Hard bullet budget enforcement — keeps resume to 2 pages
+        def _cap(bullets: list, limit: int) -> list:
+            return bullets[:limit] if bullets else bullets
+
         personal_projects: list[StructuredProject] = []
         for name in selected_project_names:
             project = next(
@@ -172,6 +180,7 @@ class StructuredResumeGenerator:
             )
             if not isinstance(bullets, list) or not bullets:
                 bullets = project.get("bullets", [])
+            bullets = _cap(bullets, 3)
             personal_projects.append(
                 StructuredProject(
                     name=project.get("name", ""),
@@ -197,6 +206,9 @@ class StructuredResumeGenerator:
             )
             if not isinstance(bullets, list) or not bullets:
                 bullets = project.get("bullets", [])
+            # Thesis gets 4 bullets, all other academic projects get 2
+            is_thesis = "Post-Quantum" in name or "zkML" in name or "MTP" in name.upper()
+            bullets = _cap(bullets, 4 if is_thesis else 2)
             academic_projects.append(
                 StructuredProject(
                     name=project.get("name", ""),
@@ -222,6 +234,7 @@ class StructuredResumeGenerator:
             )
             if not isinstance(bullets, list) or not bullets:
                 bullets = entry.get("bullets", [])
+            bullets = _cap(bullets, 3)
             work_experience.append(
                 StructuredExperience(
                     company=entry.get("company", ""),
