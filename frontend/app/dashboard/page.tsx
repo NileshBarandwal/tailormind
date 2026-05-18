@@ -158,7 +158,7 @@ export default function DashboardPage() {
     return `${job.title} at ${job.company}\n\n${job.description}`;
   }
 
-  async function selectJob(job: JobListing) {
+  async function selectJob(job: JobListing, websiteOverride?: string) {
     setSelectedJob(job);
     setCompanyName(job.company);
     setWebsite("");
@@ -168,6 +168,10 @@ export default function DashboardPage() {
     setCompanySearchUrl(
       `https://www.google.com/search?q=${searchQuery}`,
     );
+    if (websiteOverride) {
+      setWebsite(websiteOverride);
+      setCompanySearchUrl("");
+    }
     setJobUrl(job.url);
     setResume(null);
     setCoverLetter(null);
@@ -396,9 +400,7 @@ export default function DashboardPage() {
       match_score: 0,
       match_reason: "",
     };
-    selectJob(synthetic);
-    setWebsite(targetRoles.website);
-    setCompanySearchUrl("");
+    selectJob(synthetic, targetRoles.website);
   }
 
   const canGenerate = !!selectedJob && !!companyName.trim();
@@ -477,10 +479,18 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {targetRoles.roles.map((role, idx) => {
-                      const snippet =
-                        role.description.length > 200
+                      const hasGoodDescription =
+                        role.description.length > 60 &&
+                        !role.description.startsWith("Full Time") &&
+                        !role.description.startsWith("Part Time") &&
+                        !role.description.startsWith("Contract");
+                      const snippet = hasGoodDescription
+                        ? role.description.length > 200
                           ? `${role.description.slice(0, 200)}...`
-                          : role.description;
+                          : role.description
+                        : role.requirements.length > 0
+                        ? `Requirements: ${role.requirements.slice(0, 3).join(", ")}`
+                        : null;
                       return (
                         <article
                           key={`${role.title}-${idx}`}
