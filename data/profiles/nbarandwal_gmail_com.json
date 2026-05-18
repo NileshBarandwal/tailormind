@@ -2,159 +2,210 @@
   "full_name": "Nilesh Rohidas Barandwal",
   "email": "nbarandwal@gmail.com",
   "phone": "7620202306",
+  "github_url": "https://github.com/NileshBarandwal",
+  "linkedin_url": "https://www.linkedin.com/in/nilesh-barandwal-8403ab182/",
+  "iit_email": "nilesh.barandwal@iitdh.ac.in",
   "summary": "M.Tech CSE final year at IIT Dharwad (CGPA 8.11). Research focus: post-quantum cryptography applied to zkML systems, specifically replacing KZG commitments with FRI-Poseidon in the Artemis framework. Production experience shipping agentic AI systems, full stack web applications, and DeFi smart contracts.",
-  "skills": [
-    "Python",
-    "FastAPI",
-    "Node.js",
-    "React",
-    "Next.js",
-    "LangChain",
-    "SQL",
-    "Docker",
-    "Git",
-    "Solidity",
-    "TypeScript"
+  "education": [
+    {"examination": "Masters", "university": "IIT Dharwad", "institute": "IIT Dharwad", "year": 2026, "cgpa": "8.11"},
+    {"examination": "Graduation", "university": "Savitribai Phule Pune University", "institute": "Pune Institute of Computer Technology", "year": 2021, "cgpa": "7.99"},
+    {"examination": "Intermediate", "university": "MSBSHSE", "institute": "Arihant College", "year": 2017, "cgpa": "64.31%"},
+    {"examination": "Matriculation", "university": "MSBSHSE", "institute": "St. Lawrence High School", "year": 2015, "cgpa": "83.60%"}
   ],
-  "experiences": [
-    {
-      "company": "Avegen India",
-      "role": "Web Application Developer",
-      "duration": "Aug 2021 - Apr 2022",
-      "description": [
-        "Built REST APIs",
-        "Optimized data pipelines",
-        "Agile delivery of digital health products"
-      ],
-      "tech_used": [
-        "Node.js",
-        "REST APIs",
-        "JIRA",
-        "SQL"
-      ]
-    },
-    {
-      "company": "IMATMI USA",
-      "role": "Full Stack Developer Intern",
-      "duration": "Aug 2020 - Jan 2021",
-      "description": [
-        "Built React UI modules",
-        "Developed Node.js backend APIs",
-        "Deployed full stack apps on cloud servers"
-      ],
-      "tech_used": [
-        "React.js",
-        "Node.js",
-        "Express.js"
-      ]
-    },
-    {
-      "company": "IIT Bombay E-Yantra",
-      "role": "Summer Intern",
-      "duration": "May 2020 - Jun 2020",
-      "description": [
-        "Developed Rakshak App",
-        "Integrated Google Maps API",
-        "Built REST APIs for data exchange"
-      ],
-      "tech_used": [
-        "React.js",
-        "Google Maps API",
-        "REST APIs"
-      ]
-    }
-  ],
+  "skill_categories": {
+    "AI & ML": "Scikit-learn, XGBoost, SHAP, MLflow, NumPy, Pandas, LLM APIs, LangChain, LangGraph, RAG, Prompt Engineering, Hugging Face",
+    "ML Engineering": "FastAPI, Streamlit, Docker, REST APIs, Git/GitHub, ChromaDB, Vector Databases",
+    "Languages": "Python, SQL, JavaScript, TypeScript, C++, Solidity",
+    "Frameworks & Databases": "Node.js, Express.js, Django, React.js, Next.js, MySQL, PostgreSQL, SQLite",
+    "Blockchain & Web3": "Solidity, Hardhat, Web3.js, Ethers.js, IPFS, Smart Contracts, DeFi, ZKP, FRI",
+    "Cloud & DevOps": "Vercel, Railway, Render, Docker, Hugging Face Spaces, Streamlit Community Cloud"
+  },
   "projects": [
     {
-      "name": "Post-Quantum Security for Artemis zkML",
-      "description": "M.Tech thesis: replaced KZG polynomial commitments with FRI-Poseidon in the Artemis zkML framework to eliminate quantum vulnerability from Shor's algorithm",
-      "tech_used": [
-        "Python",
-        "Solidity",
-        "ZKP",
-        "FRI",
-        "Poseidon Hash",
-        "Qiskit",
-        "BSGS",
-        "CP-SNARK",
-        "Blockchain"
-      ],
-      "highlights": [
-        "Identified KZG quantum vulnerability: Shor's algorithm recovers secret trapdoor in 10.9 hours on 64-bit curve",
-        "Demonstrated attack using BSGS recovering trapdoor in 52 microseconds (9-bit) to 10.9 hours (64-bit) on real MLP weights",
-        "Simulated Shor's algorithm using Qiskit Aer (24 qubits, 4096 shots) confirming quantum threat end-to-end",
-        "Replaced KZG with FRI-Poseidon across all 7 Artemis CP-SNARK commitment operations",
-        "Reduced commitment size from 64 bytes (ECC point) to 8 bytes (Merkle root), no trusted setup required"
-      ],
-      "url": ""
+      "name": "TailorMind",
+      "tech_stack": "FastAPI, LangGraph, ChromaDB, Next.js, LiteLLM, DeepSeek, Gemini, Llama",
+      "category": "ai_agent",
+      "live_url": "",
+      "repo_url": "https://github.com/NileshBarandwal/tailormind",
+      "bullets": [
+        "Built multi-agent job application system using LangGraph orchestration with 7 specialized LLM agents for JD parsing, company research, profile matching, resume generation, cover letter generation, and application card generation",
+        "Implemented RAG over scraped company data using ChromaDB with SHA-256 chunk integrity verification; supports direct company targeting via careers page scraping",
+        "Reduced per-application prep time from 2 hours to under 5 minutes; full Next.js dashboard with job discovery, match scoring, and PDF export",
+        "Designed LiteLLM abstraction layer with automatic Groq rate limit fallback to Gemini; routes 6 tasks across 3 model providers based on cost and capability"
+      ]
     },
     {
       "name": "Bolna Voice AI Lead Qualifier",
-      "description": "Agentic voice system for autonomous outbound sales calls",
-      "tech_used": [
-        "Next.js",
-        "Express",
-        "SQLite",
-        "Bolna AI"
-      ],
-      "highlights": [
-        "Multi-turn AI conversation",
-        "Real-time webhook processing",
-        "Live dashboard"
-      ],
-      "url": "https://bolna-lead-qualifier.vercel.app"
+      "tech_stack": "Next.js, Express, SQLite, Bolna Voice AI",
+      "category": "ai_agent",
+      "live_url": "https://bolna-lead-qualifier.vercel.app",
+      "repo_url": "https://github.com/NileshBarandwal/bolna-lead-qualifier",
+      "bullets": [
+        "Built agentic voice system that autonomously conducts outbound sales calls and classifies leads as Hot/Warm/Cold without human involvement",
+        "Designed prompt templates for multi-turn AI conversations with structured outputs; implemented real-time webhook processing",
+        "Built live dashboard with 15s polling cycle showing call outcomes, lead classifications, and conversation logs in real time"
+      ]
+    },
+    {
+      "name": "Customer Retention Prediction using ML",
+      "tech_stack": "Python, XGBoost, SHAP, FastAPI, Streamlit, MLflow, Docker",
+      "category": "ml",
+      "live_url": "https://customer-retention-ml-yym36x8autejp5dap7nopz.streamlit.app",
+      "repo_url": "https://github.com/NileshBarandwal/customer-retention-ml",
+      "bullets": [
+        "Built end-to-end ML system on 7,043 records comparing Logistic Regression, Random Forest, and XGBoost; Random Forest selected with AUC-ROC of 0.848 on held-out test set",
+        "Applied SHAP TreeExplainer for global and per-prediction explainability; identified Contract type and tenure as dominant churn drivers",
+        "Served predictions via FastAPI REST endpoint with Pydantic validation; built interactive Streamlit dashboard with probability gauge and SHAP bar chart",
+        "Tracked 3 experiments using MLflow; containerized with Docker Compose; deployed backend on Hugging Face Spaces and dashboard on Streamlit Community Cloud"
+      ]
     },
     {
       "name": "AMM-DEX",
-      "description": "Constant-product AMM with LP tokens on Sepolia testnet",
-      "tech_used": [
-        "Solidity",
-        "Hardhat",
-        "React",
-        "Ethers.js"
-      ],
-      "highlights": [
-        "x*y=k formula",
-        "0.3% fee accrual",
-        "Slippage protection"
-      ],
-      "url": "https://amm-dex-orcin.vercel.app"
-    }
-  ],
-  "education": [
-    {
-      "institution": "IIT Dharwad",
-      "degree": "M.Tech",
-      "field": "Computer Science and Engineering",
-      "year": 2026,
-      "cgpa": 8.11
+      "tech_stack": "Solidity, Hardhat, React, Ethers.js v6",
+      "category": "blockchain",
+      "live_url": "https://amm-dex-orcin.vercel.app",
+      "repo_url": "https://github.com/NileshBarandwal/AMM-DEX",
+      "bullets": [
+        "Implemented constant-product AMM (x*y=k) with LP tokens, 0.3% fee accrual, and slippage protection deployed on Sepolia testnet",
+        "Built liquidity pool mechanics with proportional LP token minting and burning; swap pricing derived from invariant formula",
+        "Developed React frontend with Ethers.js v6 for wallet connection, liquidity management, and token swapping"
+      ]
     },
     {
-      "institution": "Pune Institute of Computer Technology",
-      "degree": "B.E.",
-      "field": "Computer Science",
-      "year": 2021,
-      "cgpa": 7.99
+      "name": "BookMyHotel DApp",
+      "tech_stack": "Solidity, Hardhat, Web3.js, Ethers.js, React, Ganache",
+      "category": "blockchain",
+      "live_url": "",
+      "repo_url": "",
+      "bullets": [
+        "Designed and deployed blockchain-based hotel booking DApp using Solidity smart contracts on Ethereum; implemented availability checks, access control, booking confirmation, and secure refund handling",
+        "Developed and tested 10+ smart contracts using Hardhat on local Ethereum with Ganache; optimized gas usage by 25% through efficient coding patterns",
+        "Integrated DApp frontend with blockchain using Web3.js and MetaMask for wallet-based interaction; implemented checks-effects-interactions pattern for secure Ether transfers"
+      ]
+    },
+    {
+      "name": "VectorShift AI Pipeline Builder",
+      "tech_stack": "React, Node.js, FastAPI",
+      "category": "ai_tools",
+      "live_url": "",
+      "repo_url": "https://github.com/NileshBarandwal/vectorshift-pipeline-builder",
+      "bullets": [
+        "Visual LLM workflow builder enabling drag-and-drop chaining of AI components including prompts, models, and data sources",
+        "Built React flow-based canvas with node/edge state management; FastAPI backend handles pipeline validation and execution"
+      ]
+    },
+    {
+      "name": "Armatrix Team Directory",
+      "tech_stack": "FastAPI, Next.js, TypeScript",
+      "category": "fullstack",
+      "live_url": "",
+      "repo_url": "https://github.com/NileshBarandwal/armatrix-team",
+      "bullets": [
+        "Built team directory REST API with 17 pytest unit tests achieving 100% endpoint coverage; deployed on Railway + Vercel",
+        "Implemented typed FastAPI endpoints with Pydantic validation; Next.js frontend with TypeScript for type-safe API integration"
+      ]
     }
   ],
-  "certifications": [],
-  "achievements": [
-    "e-YIC IIT Bombay Regional Finalist - top 49 teams of 300+",
-    "e-YRC Robotics Challenge - top 25 teams in India"
+  "academic_projects": [
+    {
+      "name": "Post-Quantum Security for Artemis zkML: Replacing KZG with FRI-Poseidon",
+      "context": "M.Tech Thesis, IIT Dharwad",
+      "guide": "Dr. Siba Narayan Swain",
+      "year": 2026,
+      "tech_stack": "Python, Qiskit, Solidity, FRI, Poseidon Hash, CP-SNARK",
+      "bullets": [
+        "Identified critical quantum vulnerability in Artemis zkML framework: KZG polynomial commitments rely on ECDLP hardness, which Shor's algorithm solves in polynomial time",
+        "Demonstrated attack using BSGS recovering secret trapdoor in 52 microseconds (9-bit), 101ms (32-bit), and 10.9 hours (64-bit) on real MLP weights trained on MNIST (109,386 parameters); forged commitments accepted by verifier in all cases",
+        "Simulated Shor's algorithm using Qiskit Aer (24 qubits, 4096 shots) recovering trapdoor on 9-bit curve in 3.84 seconds, confirming quantum threat end-to-end",
+        "Designed and implemented post-quantum replacement substituting KZG with FRI-Poseidon, eliminating all elliptic curve dependencies across all 7 Artemis CP-SNARK commitment operations",
+        "Reduced commitment size from 64 bytes (ECC point) to 8 bytes (Merkle root); replacement requires no trusted setup and resists both classical BSGS and quantum Shor's attacks"
+      ]
+    },
+    {
+      "name": "Survey and Implementation of Various Consensus Mechanisms",
+      "context": "Blockchain Project, CS426",
+      "guide": "Dr. Siba Narayan Swain",
+      "year": 2025,
+      "tech_stack": "Python, Solidity, Blockchain",
+      "bullets": [
+        "Designed, implemented, and compared blockchain consensus mechanisms including PoW, PoS, and PBFT using clean and efficient code",
+        "Evaluated performance metrics including throughput, latency, scalability, fault tolerance, and energy efficiency across 15+ test scenarios",
+        "Analyzed impact of network size and transaction volume on consensus security guarantees and smart contract execution reliability"
+      ]
+    },
+    {
+      "name": "SAMS: Student Attendance Management System",
+      "context": "CS618 MTech IITDH",
+      "guide": "Ms. Gayathri Ananthanarayanan",
+      "year": 2024,
+      "tech_stack": "Django, MySQL, FastAPI, HTML, CSS, JavaScript",
+      "bullets": [
+        "Built full-stack web application using Django, MySQL, and FastAPI with real-time barcode-based attendance and role-based access control (RBAC) for students, teachers, TAs, and admins",
+        "Designed secure RBAC with custom dashboards for marking, analytics, and reporting; normalized ER schema and optimized SQL queries",
+        "Prototyped UI in Figma, validated API endpoints via auto-generated Swagger docs, added unit tests for reliability"
+      ]
+    }
   ],
+  "work_experience": [
+    {
+      "company": "Avegen India Private Limited",
+      "role": "Web Application Developer",
+      "duration": "Aug'21-Apr'22",
+      "guide": "",
+      "bullets": [
+        "Collaborated with cross-functional teams to design, develop, and deliver scalable digital health products in an agile environment",
+        "Built and maintained REST APIs and optimized data pipelines to improve performance and reliability",
+        "Conducted sprint planning and tracking using JIRA, improving team efficiency and delivery predictability",
+        "Designed test plans, debugged production issues, and authored technical documentation"
+      ]
+    },
+    {
+      "company": "Intellect Mind & Talent Management Innovations LLC USA",
+      "role": "Full Stack Developer Intern",
+      "duration": "Aug'20-Jan'21",
+      "guide": "Mr. Ashwin Chaudhari and Dr. Gaurav Bansod",
+      "bullets": [
+        "Built responsive UI modules using React.js and developed an admin dashboard for web application management",
+        "Developed secure, scalable backend APIs using Node.js and Express.js; managed database integration and authentication workflows",
+        "Implemented user authentication and authorization workflows following security best practices",
+        "Deployed and tested full-stack applications on cloud servers, troubleshooting issues to ensure reliability"
+      ]
+    },
+    {
+      "company": "IIT Bombay, E-Yantra",
+      "role": "Summer Intern",
+      "duration": "May'20-Jun'20",
+      "guide": "Prof. Kavi Arya, Dr. Rathin Biswas, Mr. Kedar Anavardekar",
+      "bullets": [
+        "Collaborated with cross-functional team to design and develop MHRD-sponsored Rakshak App working in an agile setup",
+        "Developed reusable React.js UI components and integrated Google Maps API for real-time COVID data visualization",
+        "Built clean and efficient REST APIs to enable reliable data exchange between system components",
+        "Optimized real-time navigation algorithms to avoid unsafe or COVID-affected routes",
+        "Maintained technical documentation and co-authored research paper based on project results"
+      ]
+    }
+  ],
+  "publications": [
+    "Journal: New Techno Humanities. Article: A comprehensive easy-to-use techno-human solution for the resource-constrained nations in the fight against communicable diseases like the coronavirus pandemic."
+  ],
+  "positions": [
+    "Senate & PGAPEC Student Member, IIT Dharwad (2025-26): Represented M.Tech. students in academic policy discussions, curriculum review, and student-faculty coordination.",
+    "Student Placement Coordinator, IIT Dharwad: Coordinated placement activities, acted as liaison between students and recruiters, organized full-time job drives, and managed team logistics.",
+    "Inbound Head, International Relations Office, IIT Dharwad: Led selection and management of buddies for inbound international student program; coordinated with IRO Head; organized events for international students.",
+    "Head TA, Computer Programming (CS101): Managed TAs, assisted professor in lab design, and evaluated coursework for 300+ students.",
+    "Teaching Assistant (DAA CS205/CS211, DSA CS201/CS205): Assisted professors in tutorials, labs, and student evaluations.",
+    "Head Associate, Web Team, HarshTaal 25 (IIT Dharwad Cultural Fest): Led team for website design, deployment, and maintenance."
+  ],
+  "achievements": [
+    "e-YIC (IIT Bombay, MHRD-NMEICT): Regional finalist; top 49 teams among 300+ nationwide.",
+    "e-YRC Robotics Challenge (IIT Bombay): Top 25 teams in India to successfully submit final solution."
+  ],
+  "skills": ["Python", "FastAPI", "Node.js", "React", "Next.js", "LangChain", "LangGraph", "RAG", "LLM APIs", "SQL", "Docker", "Solidity", "Web3", "TypeScript", "ChromaDB", "Streamlit", "XGBoost", "SHAP", "MLflow", "Hardhat", "Ethers.js"],
   "preferences": {
-    "target_roles": [
-      "AI Engineer",
-      "Backend Engineer",
-      "Full Stack Engineer"
-    ],
-    "preferred_locations": [
-      "Bangalore",
-      "Pune",
-      "Remote"
-    ],
+    "target_roles": ["AI Engineer", "Agent Engineer", "RAG Engineer", "ML Engineer", "Backend Engineer", "Full Stack Engineer", "Blockchain Engineer", "ZK Engineer", "Smart Contract Developer", "Forward Deployed Engineer"],
+    "preferred_locations": ["Bangalore", "Pune", "Remote"],
     "notice_period": "immediate"
   },
   "created_at": "2026-05-17T00:00:00Z",
-  "updated_at": "2026-05-17T12:00:00Z"
+  "updated_at": "2026-05-18T00:00:00Z"
 }
