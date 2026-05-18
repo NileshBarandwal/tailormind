@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from backend.agents.application_card_generator import ApplicationCardGenerator
@@ -352,4 +353,90 @@ def generate_structured_resume_route(
         research,
         match,
         request.instructions or "",
+    )
+
+
+@router.post("/generate/structured-resume/stream")
+def generate_structured_resume_stream(
+    request: GenerateResumeRequest,
+):
+    def event_stream():
+        def emit(obj: dict) -> str:
+            return f"data: {json.dumps(obj)}\n\n"
+
+        try:
+            # Step 1: Parse JD
+            yield emit({"type": "progress", "step": 1, "total": 4,
+                        "label": "Parsing job description..."})
+            profile_dict = _load_profile_dict(request.profile_id)
+            try:
+                parsed_jd = _jd_parser.parse(request.jd_text)
+            except Exception as exc:
+                yield emit({"type": "error",
+                            "message": f"JD parsing failed: {exc}"})
+                return
+
+            # Step 2: Research company
+            yield emit({"type": "progress", "step": 2, "total": 4,
+                        "label": "Researching company..."})
+            research = None
+            if request.website and request.website.strip():
+                try:
+                    research = _company_researcher.research(
+                        request.company_name, request.website)
+                except Exception as exc:
+                    print(f"[stream] research skipped: {exc}")
+            if research is None:
+                from datetime import datetime, timezone
+                from backend.models.schemas import CompanyBrief, ResearchReport
+                brief = CompanyBrief(
+                    company_name=request.company_name,
+                    website=request.website or "",
+                    mission="", tech_stack=[], culture_signals=[],
+                    recent_news=[], funding_stage="unknown",
+                    employee_count="unknown", scraped_urls=[],
+                    researched_at=datetime.now(timezone.utc),
+                )
+                research = ResearchReport(
+                    company_brief=brief, raw_chunks=[],
+                    chunk_ids=[], collection_name="",
+                )
+
+            # Step 3: Match profile
+            yield emit({"type": "progress", "step": 3, "total": 4,
+                        "label": "Matching your profile..."})
+            profile = _build_userprofile_from_pool(profile_dict)
+            try:
+                match = _profile_matcher.match(profile, parsed_jd)
+            except Exception as exc:
+                yield emit({"type": "error",
+                            "message": f"Profile matching failed: {exc}"})
+                return
+
+            # Step 4: Generate resume
+            yield emit({"type": "progress", "step": 4, "total": 4,
+                        "label": "Generating resume..."})
+            try:
+                result = _structured_resume_gen.generate(
+                    profile_dict, parsed_jd, research, match,
+                    request.instructions or "",
+                )
+            except Exception as exc:
+                yield emit({"type": "error",
+                            "message": f"Resume generation failed: {exc}"})
+                return
+
+            yield emit({"type": "done",
+                        "data": result.model_dump(mode="json")})
+
+        except Exception as exc:
+            yield emit({"type": "error", "message": str(exc)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )

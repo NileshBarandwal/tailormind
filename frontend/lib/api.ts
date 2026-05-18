@@ -119,6 +119,75 @@ export function generateStructuredResume(
   });
 }
 
+export interface GenerationProgressEvent {
+  type: "progress";
+  step: number;
+  total: number;
+  label: string;
+}
+
+export interface GenerationDoneEvent {
+  type: "done";
+  data: StructuredResume;
+}
+
+export interface GenerationErrorEvent {
+  type: "error";
+  message: string;
+}
+
+export type GenerationEvent =
+  | GenerationProgressEvent
+  | GenerationDoneEvent
+  | GenerationErrorEvent;
+
+export async function generateStructuredResumeStream(
+  profileId: string,
+  jdText: string,
+  companyName: string,
+  website: string,
+  instructions: string,
+  onEvent: (event: GenerationEvent) => void,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/generate/structured-resume/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      profile_id: profileId,
+      jd_text: jdText,
+      company_name: companyName,
+      website,
+      instructions,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.replace(/^data: /, "").trim();
+      if (!trimmed) continue;
+      try {
+        const event = JSON.parse(trimmed) as GenerationEvent;
+        onEvent(event);
+      } catch {
+        // skip malformed lines
+      }
+    }
+  }
+}
+
 export function generateCoverLetter(
   profileId: string,
   jdText: string,

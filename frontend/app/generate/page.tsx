@@ -13,10 +13,12 @@ import {
   generateApplicationCard,
   generateCoverLetter,
   generateResume,
-  generateStructuredResume,
+  generateStructuredResumeStream,
+  type GenerationEvent,
 } from "@/lib/api";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
+import GenerationProgress from "@/components/GenerationProgress";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 
@@ -44,6 +46,25 @@ export default function GeneratePage() {
     useState<StructuredResume | null>(null);
   const [structuredLoading, setStructuredLoading] = useState(false);
   const [structuredError, setStructuredError] = useState("");
+
+  const GENERATION_STEPS = [
+    "Parsing job description...",
+    "Researching company...",
+    "Matching your profile...",
+    "Generating resume...",
+  ];
+
+  type ProgressStep = {
+    label: string;
+    status: "waiting" | "active" | "done";
+  };
+
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>(
+    GENERATION_STEPS.map((label) => ({
+      label,
+      status: "waiting" as const,
+    })),
+  );
 
   const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
@@ -112,13 +133,40 @@ export default function GeneratePage() {
     setStructuredLoading(true);
     setStructuredError("");
     setStructuredResume(null);
+    setProgressSteps(
+      GENERATION_STEPS.map((label) => ({ label, status: "waiting" as const })),
+    );
     try {
-      const r = await generateStructuredResume(
-        PROFILE_ID, jdText, companyName, website, instructions);
-      setStructuredResume(r);
+      await generateStructuredResumeStream(
+        PROFILE_ID,
+        jdText,
+        companyName,
+        website,
+        instructions,
+        (event: GenerationEvent) => {
+          if (event.type === "progress") {
+            setProgressSteps((prev) =>
+              prev.map((s, i) => ({
+                ...s,
+                status:
+                  i + 1 < event.step ? "done" :
+                  i + 1 === event.step ? "active" : "waiting",
+              })),
+            );
+          } else if (event.type === "done") {
+            setProgressSteps((prev) =>
+              prev.map((s) => ({ ...s, status: "done" as const })),
+            );
+            setStructuredResume(event.data);
+          } else if (event.type === "error") {
+            setStructuredError(event.message);
+          }
+        },
+      );
     } catch (e) {
       setStructuredError(
-        e instanceof Error ? e.message : "Generation failed");
+        e instanceof Error ? e.message : "Generation failed",
+      );
     } finally {
       setStructuredLoading(false);
     }
@@ -235,9 +283,6 @@ export default function GeneratePage() {
             >
               {structuredLoading ? "Composing..." : "New Resume ✦"}
             </button>
-            {structuredError && (
-              <p className="text-xs text-red-600">{structuredError}</p>
-            )}
           </div>
           <div className="space-y-1">
             <button
@@ -303,6 +348,15 @@ export default function GeneratePage() {
         </section>
       )}
 
+      {structuredLoading && (
+        <GenerationProgress steps={progressSteps} />
+      )}
+      {!structuredLoading && structuredError && (
+        <GenerationProgress
+          steps={progressSteps}
+          error={structuredError}
+        />
+      )}
       {structuredResume && (
         <div className="mt-4 space-y-2">
           <div className="flex items-center gap-2">
