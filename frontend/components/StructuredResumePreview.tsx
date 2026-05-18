@@ -33,6 +33,7 @@ export default function StructuredResumePreview({ resume }: Props) {
         </p>
       </div>
 
+      <div id="resume-print-root">
       <div ref={printRef} id="resume-document" style={PAGE}>
 
         {/* HEADER */}
@@ -42,12 +43,12 @@ export default function StructuredResumePreview({ resume }: Props) {
           <tbody>
             <tr>
               <td style={{
-                width: "2.4cm", verticalAlign: "middle", paddingRight: 8
+                width: "2cm", verticalAlign: "middle", paddingRight: 8
               }}>
                 <img
                   src="/iitdh-logo.png"
                   alt="IIT Dharwad"
-                  style={{ width: "1.8cm", height: "auto" }}
+                  style={{ width: "1.6cm", height: "auto" }}
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
                     if (!img.src.includes("drive.google")) {
@@ -58,14 +59,6 @@ export default function StructuredResumePreview({ resume }: Props) {
                     }
                   }}
                 />
-                <div style={{
-                  fontSize: "7pt",
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  marginTop: 2,
-                }}>
-                  Indian Institute of Technology Dharwad
-                </div>
               </td>
               <td style={{ verticalAlign: "middle", paddingLeft: 8 }}>
                 <div style={{ fontWeight: "bold", fontSize: "12pt" }}>
@@ -73,15 +66,6 @@ export default function StructuredResumePreview({ resume }: Props) {
                 </div>
                 <div style={{ fontWeight: "bold", fontSize: "10pt" }}>
                   CSE (Computer Science &amp; Engineering)
-                </div>
-                <div style={{ fontSize: "9pt", fontWeight: "bold" }}>
-                  <a href={resume.contact.github_url} style={LINK}>
-                    &#9651; GitHub
-                  </a>
-                  &nbsp;&nbsp;
-                  <a href={resume.contact.linkedin_url} style={LINK}>
-                    in LinkedIn
-                  </a>
                 </div>
               </td>
               <td style={{
@@ -91,10 +75,10 @@ export default function StructuredResumePreview({ resume }: Props) {
                 fontWeight: "bold",
                 whiteSpace: "nowrap",
               }}>
-                <div>
-                  &#9993; {resume.contact.iit_email || resume.contact.email}
-                </div>
+                <div>&#9993; {resume.contact.iit_email || resume.contact.email}</div>
                 <div>&#9743; {resume.contact.phone}</div>
+                <div><a href={resume.contact.github_url} style={LINK}>&#9651; GitHub Profile</a></div>
+                <div><a href={resume.contact.linkedin_url} style={LINK}>in LinkedIn Profile</a></div>
               </td>
             </tr>
           </tbody>
@@ -222,27 +206,21 @@ export default function StructuredResumePreview({ resume }: Props) {
         )}
 
       </div>
+      </div> {/* resume-print-root */}
 
       <style>{`
         @media print {
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; }
-          nav, header, aside, footer { display: none !important; }
-          body * { visibility: hidden; }
-          #resume-document,
-          #resume-document * { visibility: visible; }
-          #resume-document {
-            position: absolute;
-            left: 0; top: 0;
+          @page { size: A4; margin: 14mm; }
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          section, li, tr { page-break-inside: avoid; }
-          h2, h3, .section-head { page-break-after: avoid; }
-          @page { size: A4; margin: 14mm; }
+          body > * { display: none !important; }
+          #resume-print-root { display: block !important; }
+          .no-print { display: none !important; }
         }
       `}</style>
     </>

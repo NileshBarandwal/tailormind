@@ -30,8 +30,10 @@ Return strict JSON only:
 Rules:
 - Only use names/companies that exist exactly in the profile pool
 - Select personal_projects with highest JD tech stack overlap (max 3)
-- Select academic_projects (max 2). Include the M.Tech thesis if ZKP, blockchain, AI security, or post-quantum is relevant to JD
+- Select ALL academic_projects from the pool. Include every one. Do not limit to max 2.
+- ALWAYS include the M.Tech thesis as an academic project. It is the strongest project and must always appear. It demonstrates research depth regardless of role.
 - For AI/ML roles: prioritize TailorMind, Bolna, Customer Retention
+- Always select exactly 3 personal_projects. Never fewer than 3.
 - For blockchain/web3 roles: prioritize AMM-DEX, BookMyHotel, Consensus Mechanisms thesis
 - For full stack/backend roles: prioritize TailorMind, Armatrix, Bolna
 - Always include all work_experience unless JD is highly specialized
@@ -51,7 +53,7 @@ STRICT RULES - these are absolute and non-negotiable:
 5. For AI/ML roles: emphasize ML methods, model performance, inference pipelines
 6. For blockchain roles: emphasize smart contracts, security, decentralization
 7. For full stack roles: emphasize end-to-end ownership, frontend + backend integration
-8. Keep bullets concise: 1-2 lines each
+8. Each bullet must remain as a separate item. Never merge two bullets into one. Keep the original length and detail of each bullet.
 9. Keep the original bullet if rewriting would make it worse
 10. ALWAYS include ALL bullets for each item. Never drop bullets. If the original has 4 bullets, the rewrite must have 4 bullets.
 
