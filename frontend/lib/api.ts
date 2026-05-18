@@ -6,6 +6,7 @@ import type {
   JobListing,
   MatchScore,
   SavedApplication,
+  StructuredResume,
   TailoredCoverLetter,
   TailoredResume,
   UserProfile,
@@ -88,6 +89,25 @@ export function generateResume(
   instructions: string,
 ): Promise<TailoredResume> {
   return apiFetch<TailoredResume>("/generate/resume", {
+    method: "POST",
+    body: JSON.stringify({
+      profile_id: profileId,
+      jd_text: jdText,
+      company_name: companyName,
+      website,
+      instructions,
+    }),
+  });
+}
+
+export function generateStructuredResume(
+  profileId: string,
+  jdText: string,
+  companyName: string,
+  website: string,
+  instructions: string,
+): Promise<StructuredResume> {
+  return apiFetch<StructuredResume>("/generate/structured-resume", {
     method: "POST",
     body: JSON.stringify({
       profile_id: profileId,

@@ -188,3 +188,53 @@ class CompanyRoles(BaseModel):
     website: str
     roles: list[ExtractedRole] = Field(default_factory=list)
     scraped_at: datetime
+
+
+class StructuredContact(BaseModel):
+    full_name: str
+    email: str
+    phone: str
+    github_url: str = ""
+    linkedin_url: str = ""
+    iit_email: str = ""
+
+
+class StructuredEducationRow(BaseModel):
+    examination: str
+    university: str
+    institute: str
+    year: int
+    cgpa: str
+
+
+class StructuredExperience(BaseModel):
+    company: str
+    role: str
+    duration: str
+    guide: str = ""
+    bullets: list[str] = Field(default_factory=list)
+
+
+class StructuredProject(BaseModel):
+    name: str
+    tech_stack: str
+    bullets: list[str] = Field(default_factory=list)
+    live_url: str = ""
+    repo_url: str = ""
+    context: str = ""
+    guide: str = ""
+
+
+class StructuredResume(BaseModel):
+    contact: StructuredContact
+    education: list[StructuredEducationRow] = Field(default_factory=list)
+    skill_categories: dict[str, str] = Field(default_factory=dict)
+    personal_projects: list[StructuredProject] = Field(default_factory=list)
+    work_experience: list[StructuredExperience] = Field(default_factory=list)
+    academic_projects: list[StructuredProject] = Field(default_factory=list)
+    publications: list[str] = Field(default_factory=list)
+    positions: list[str] = Field(default_factory=list)
+    achievements: list[str] = Field(default_factory=list)
+    target_role: str = ""
+    jd_keywords_used: list[str] = Field(default_factory=list)
+    generated_at: datetime

@@ -152,3 +152,53 @@ export interface CompanyRoles {
   roles: ExtractedRole[];
   scraped_at: string;
 }
+
+export interface StructuredContact {
+  full_name: string;
+  email: string;
+  phone: string;
+  github_url: string;
+  linkedin_url: string;
+  iit_email: string;
+}
+
+export interface StructuredEducationRow {
+  examination: string;
+  university: string;
+  institute: string;
+  year: number;
+  cgpa: string;
+}
+
+export interface StructuredExperience {
+  company: string;
+  role: string;
+  duration: string;
+  guide: string;
+  bullets: string[];
+}
+
+export interface StructuredProject {
+  name: string;
+  tech_stack: string;
+  bullets: string[];
+  live_url: string;
+  repo_url: string;
+  context: string;
+  guide: string;
+}
+
+export interface StructuredResume {
+  contact: StructuredContact;
+  education: StructuredEducationRow[];
+  skill_categories: Record<string, string>;
+  personal_projects: StructuredProject[];
+  work_experience: StructuredExperience[];
+  academic_projects: StructuredProject[];
+  publications: string[];
+  positions: string[];
+  achievements: string[];
+  target_role: string;
+  jd_keywords_used: string[];
+  generated_at: string;
+}
