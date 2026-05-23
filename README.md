@@ -2,13 +2,16 @@
 
 TailorMind is a targeted opportunity discovery and application engine. It pulls jobs from real listing APIs, researches each company deeply, scores fit against your profile, and generates a tailored resume, cover letter, and application intelligence card you can paste into any application form. The goal is to take per-application prep from two hours down to under five minutes without auto-applying on your behalf.
 
+**Live demo**: https://tailormind-ebon.vercel.app
+
 ## What It Does
 
-- Discovers jobs from Adzuna and Remotive matching your profile and preferences
+- Discovers jobs from Adzuna matching your profile and preferences
 - Researches each company deeply using RAG over scraped content (homepage, about, careers) with SHA-256 chunk integrity
 - Scores your profile against each JD honestly across skills, experience, and education
 - Generates a tailored resume, cover letter, and application intelligence card for any opportunity
 - Exports PDF-ready resumes with a WYSIWYG HTML preview and LaTeX/Overleaf tab
+- SSE-based real-time progress indicator during generation
 - First-run onboarding flow — no JSON files to edit manually
 
 ## Architecture
@@ -33,7 +36,6 @@ cd tailormind
 python3 -m venv backend/.venv
 source backend/.venv/bin/activate
 pip install -r backend/requirements.txt
-playwright install chromium
 cp .env.example .env
 # Fill in your API keys in .env
 ```
@@ -44,7 +46,6 @@ cp .env.example .env
 cd frontend
 npm install
 cd ..
-# frontend/.env.example is only needed when pointing at a remote backend
 ```
 
 4. Run
@@ -62,12 +63,19 @@ cd frontend && npm run dev
 
 ## Deployment
 
-### Backend → Railway
+### Backend → Render
 
-1. Connect your GitHub repo to Railway
-2. Set the root directory to `/` (repo root, not `/backend`)
-3. Railway will detect `backend/railway.toml` automatically
-4. Add these environment variables in Railway dashboard:
+1. Go to render.com → New → Web Service
+2. Connect your GitHub repo
+3. Configure:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn api.main:app --host 0.0.0.0 --port $PORT` |
+
+4. Add environment variables:
 
 | Variable | Value |
 |---|---|
@@ -77,20 +85,21 @@ cd frontend && npm run dev
 | ADZUNA_APP_KEY | your key |
 | ALLOWED_ORIGINS | https://your-app.vercel.app |
 
-5. Deploy. Health check is at `/health`.
+5. Deploy. Health check: `https://your-service.onrender.com/health`
+
+> **Keep-alive**: Render's free tier sleeps after 15 minutes of inactivity. Set up a free monitor at uptimerobot.com to ping `/health` every 5 minutes.
 
 ### Frontend → Vercel
 
 1. Connect your GitHub repo to Vercel
 2. Set the root directory to `frontend`
-3. Add this environment variable in Vercel dashboard:
+3. Add this environment variable:
 
 | Variable | Value |
 |---|---|
-| NEXT_PUBLIC_API_URL | https://your-backend.up.railway.app |
+| NEXT_PUBLIC_API_URL | https://your-service.onrender.com |
 
-4. Deploy. The Next.js proxy in `next.config.mjs` routes
-`/api/*` to your Railway backend automatically.
+4. Deploy. The Next.js proxy in `next.config.mjs` routes `/api/*` to your Render backend automatically.
 
 ## API Keys
 
@@ -99,7 +108,7 @@ cd frontend && npm run dev
 | Groq | All LLM generation tasks | Yes | Yes |
 | Google AI Studio | Company research (Gemini) | Yes | Yes |
 | Adzuna | Job listings | Yes | Yes |
-| OpenRouter | Fallback only (optional) | Yes | No |
+| OpenRouter | Fallback only | Yes | No |
 | Supabase | Audit log database | Yes | No |
 
 ## Environment Variables
@@ -120,30 +129,26 @@ cd frontend && npm run dev
 
 | Variable | Purpose | Required |
 |---|---|---|
-| NEXT_PUBLIC_API_URL | Railway backend URL | Production only |
+| NEXT_PUBLIC_API_URL | Render backend URL | Production only |
 
 ## Project Structure
-
-```
 backend/
-  agents/         JD parser, company researcher, profile matcher,
-                  resume/cover letter generators, job discovery,
-                  application card generator, structured resume generator
-  api/routes/     jobs, profile, applications, generate, instructions
-  core/           config, model_router (LiteLLM + fallback chain),
-                  vector_store (ChromaDB + SHA-256)
-  models/         Pydantic schemas
-  services/       audit_logger, pdf_generator
-  tests/          mocked + live integration tests
-
+agents/         JD parser, company researcher, profile matcher,
+resume/cover letter generators, job discovery,
+application card generator, structured resume generator
+api/routes/     jobs, profile, applications, generate, instructions
+core/           config, model_router (LiteLLM + fallback chain),
+vector_store (ChromaDB + SHA-256)
+models/         Pydantic schemas
+services/       audit_logger, pdf_generator
+tests/          mocked + live integration tests
 frontend/
-  app/            dashboard, generate, profile, instructions, onboarding
-  components/     JobCard, ResumePreview, CoverLetterPreview,
-                  ApplicationCardView, MatchScoreCard, InstructionPanel,
-                  GenerationProgress, StructuredResumePreview
-  lib/            api.ts, persistence.ts, errorMessage.ts
-  types/          TypeScript mirrors of backend schemas
-```
+app/            dashboard, generate, profile, instructions, onboarding
+components/     JobCard, ResumePreview, CoverLetterPreview,
+ApplicationCardView, MatchScoreCard, InstructionPanel,
+GenerationProgress, StructuredResumePreview, KeepAlive
+lib/            api.ts, persistence.ts, errorMessage.ts
+types/          TypeScript mirrors of backend schemas
 
 ## Resume Line
 
