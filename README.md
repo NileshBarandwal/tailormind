@@ -83,9 +83,9 @@ cd frontend && npm run dev
 | GOOGLE_API_KEY | your key |
 | ADZUNA_APP_ID | your key |
 | ADZUNA_APP_KEY | your key |
-| ALLOWED_ORIGINS | https://your-app.vercel.app |
+| ALLOWED_ORIGINS | https://tailormind-ebon.vercel.app |
 
-5. Deploy. Health check: `https://your-service.onrender.com/health`
+5. Deploy. Health check: `https://tailormind.onrender.com/health`
 
 > **Keep-alive**: Render's free tier sleeps after 15 minutes of inactivity. Set up a free monitor at uptimerobot.com to ping `/health` every 5 minutes.
 
@@ -97,7 +97,7 @@ cd frontend && npm run dev
 
 | Variable | Value |
 |---|---|
-| NEXT_PUBLIC_API_URL | https://your-service.onrender.com |
+| NEXT_PUBLIC_API_URL | https://tailormind.onrender.com |
 
 4. Deploy. The Next.js proxy in `next.config.mjs` routes `/api/*` to your Render backend automatically.
 
@@ -132,23 +132,26 @@ cd frontend && npm run dev
 | NEXT_PUBLIC_API_URL | Render backend URL | Production only |
 
 ## Project Structure
+
+```
 backend/
-agents/         JD parser, company researcher, profile matcher,
-resume/cover letter generators, job discovery,
-application card generator, structured resume generator
-api/routes/     jobs, profile, applications, generate, instructions
-core/           config, model_router (LiteLLM + fallback chain),
-vector_store (ChromaDB + SHA-256)
-models/         Pydantic schemas
-services/       audit_logger, pdf_generator
-tests/          mocked + live integration tests
+  agents/         JD parser, company researcher, profile matcher,
+                  resume/cover letter generators, job discovery,
+                  application card generator, structured resume generator
+  api/routes/     jobs, profile, applications, generate, instructions
+  core/           config, model_router (LiteLLM + fallback chain),
+                  vector_store (ChromaDB + SHA-256)
+  models/         Pydantic schemas
+  services/       audit_logger, pdf_generator
+  tests/          mocked + live integration tests
 frontend/
-app/            dashboard, generate, profile, instructions, onboarding
-components/     JobCard, ResumePreview, CoverLetterPreview,
-ApplicationCardView, MatchScoreCard, InstructionPanel,
-GenerationProgress, StructuredResumePreview, KeepAlive
-lib/            api.ts, persistence.ts, errorMessage.ts
-types/          TypeScript mirrors of backend schemas
+  app/            dashboard, generate, profile, instructions, onboarding
+  components/     JobCard, ResumePreview, CoverLetterPreview,
+                  ApplicationCardView, MatchScoreCard, InstructionPanel,
+                  GenerationProgress, StructuredResumePreview, KeepAlive
+  lib/            api.ts, persistence.ts, errorMessage.ts
+  types/          TypeScript mirrors of backend schemas
+```
 
 ## Resume Line
 
