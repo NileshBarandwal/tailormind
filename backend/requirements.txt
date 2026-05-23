@@ -15,4 +15,5 @@ weasyprint
 pytest
 pytest-asyncio
 httpx
+beautifulsoup4
 gunicorn
