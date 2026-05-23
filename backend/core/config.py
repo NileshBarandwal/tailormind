@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
 
+    ALLOWED_ORIGINS: str = "*"
+
     ADZUNA_APP_ID: str = ""
     ADZUNA_APP_KEY: str = ""
 

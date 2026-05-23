@@ -8,7 +8,6 @@ langchain
 langchain-community
 langgraph
 chromadb
-crawl4ai
 psycopg2-binary
 sqlalchemy
 alembic

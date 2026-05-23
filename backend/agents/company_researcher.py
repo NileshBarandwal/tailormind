@@ -3,7 +3,8 @@ import json
 import re
 from datetime import datetime, timezone
 
-from crawl4ai import AsyncWebCrawler
+import httpx
+from bs4 import BeautifulSoup
 
 from backend.core.model_router import ModelRouter
 from backend.core.vector_store import VectorStore
@@ -43,11 +44,16 @@ class CompanyResearcher:
     async def _scrape_urls(self, urls: list[str]) -> tuple[list[str], list[str]]:
         markdowns: list[str] = []
         successful: list[str] = []
-        async with AsyncWebCrawler() as crawler:
+        async with httpx.AsyncClient(
+            timeout=30,
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0"},
+        ) as client:
             for url in urls:
                 try:
-                    result = await crawler.arun(url=url)
-                    md = getattr(result, "markdown", None) or ""
+                    response = await client.get(url)
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    md = soup.get_text(separator="\n", strip=True)
                     if md.strip():
                         markdowns.append(md)
                         successful.append(url)
