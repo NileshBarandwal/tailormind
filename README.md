@@ -61,6 +61,13 @@ cd frontend && npm run dev
 
 5. Open http://localhost:3000 — first visit redirects to onboarding
 
+## Running Tests
+
+```bash
+source backend/.venv/bin/activate
+python -m pytest backend/tests/ -v -m "not live"
+```
+
 ## Deployment
 
 ### Backend → Render
@@ -135,23 +142,30 @@ cd frontend && npm run dev
 
 ```
 backend/
-  agents/         JD parser, company researcher, profile matcher,
-                  resume/cover letter generators, job discovery,
-                  application card generator, structured resume generator
-  api/routes/     jobs, profile, applications, generate, instructions
-  core/           config, model_router (LiteLLM + fallback chain),
-                  vector_store (ChromaDB + SHA-256)
-  models/         Pydantic schemas
-  services/       audit_logger, pdf_generator
-  tests/          mocked + live integration tests
+agents/         JD parser, company researcher, profile matcher,
+                resume/cover letter generators, job discovery,
+                application card generator, structured resume generator
+api/routes/     jobs, profile, applications, generate, instructions
+core/           config, model_router (LiteLLM + fallback chain),
+                vector_store (ChromaDB + SHA-256)
+models/         Pydantic schemas
+services/       audit_logger, pdf_generator
+tests/          mocked + live integration tests
 frontend/
-  app/            dashboard, generate, profile, instructions, onboarding
-  components/     JobCard, ResumePreview, CoverLetterPreview,
-                  ApplicationCardView, MatchScoreCard, InstructionPanel,
-                  GenerationProgress, StructuredResumePreview, KeepAlive
-  lib/            api.ts, persistence.ts, errorMessage.ts
-  types/          TypeScript mirrors of backend schemas
+app/            dashboard, generate, profile, instructions, onboarding
+components/     JobCard, ResumePreview, CoverLetterPreview,
+                ApplicationCardView, MatchScoreCard, InstructionPanel,
+                GenerationProgress, StructuredResumePreview, KeepAlive
+lib/            api.ts, persistence.ts, errorMessage.ts
+types/          TypeScript mirrors of backend schemas
 ```
+
+## Known Limitations
+
+- Single-user profile system — no authentication or multi-user support yet
+- Render free tier cold starts — first request after inactivity takes 30–60 seconds (mitigated by UptimeRobot keepalive)
+- Company research requires a valid website URL — scraping may fail on heavily JS-rendered pages
+- LaTeX export requires uploading `iitdh-logo.png` to Overleaf project root for the logo to render
 
 ## Resume Line
 
