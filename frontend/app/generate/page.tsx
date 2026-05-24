@@ -57,6 +57,8 @@ export default function GeneratePage() {
   const [structuredLoading, setStructuredLoading] = useState(false);
   const [structuredError, setStructuredError] = useState("");
 
+  const [versionSavedId, setVersionSavedId] = useState<string | null>(null);
+
   const GENERATION_STEPS = [
     "Parsing job description...",
     "Researching company...",
@@ -165,6 +167,7 @@ export default function GeneratePage() {
   }
 
   async function handleGenerateStructuredResume() {
+    setVersionSavedId(null);
     setStructuredLoading(true);
     setStructuredError("");
     setProgressSteps(
@@ -192,6 +195,9 @@ export default function GeneratePage() {
               prev.map((s) => ({ ...s, status: "done" as const })),
             );
             setStructuredResume(event.data);
+            if (event.version_id) {
+              setVersionSavedId(event.version_id);
+            }
             if (companyName) {
               const k = jobKey(companyName);
               lsSet("tm_generate_last_key", k);
@@ -455,6 +461,37 @@ export default function GeneratePage() {
       )}
       {structuredResume && (
         <div className="mt-4 space-y-2">
+          {versionSavedId && (
+            <div style={{
+              padding: "8px 14px", borderRadius: 6, marginBottom: 8,
+              background: "#f0fdf4", border: "1px solid #bbf7d0",
+              display: "flex", alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: 12, color: "#15803d",
+            }}>
+              <span>✓ Resume version saved</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <a
+                  href="/dashboard"
+                  style={{
+                    fontSize: 12, color: "#15803d", fontWeight: 600,
+                    textDecoration: "underline", cursor: "pointer",
+                  }}
+                >
+                  Open Dashboard →
+                </a>
+                <button
+                  onClick={() => setVersionSavedId(null)}
+                  style={{
+                    background: "none", border: "none",
+                    cursor: "pointer", color: "#86efac", fontSize: 13,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">Resume Preview</h3>
             <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 font-medium">
