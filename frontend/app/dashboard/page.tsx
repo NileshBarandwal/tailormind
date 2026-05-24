@@ -54,6 +54,7 @@ import GenerationProgress, {
 import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
+import ResumeVersionHistory from "@/components/ResumeVersionHistory";
 
 
 const ROLE_PRESETS = [
@@ -126,6 +127,12 @@ export default function DashboardPage() {
     useState<StructuredResume | null>(null);
   const [structuredLoading, setStructuredLoading] = useState(false);
   const [structuredError, setStructuredError] = useState("");
+
+  const [restoredFrom, setRestoredFrom] = useState<{
+    version_id: string;
+    company_name: string;
+    created_at: string;
+  } | null>(null);
 
   const GENERATION_STEPS = [
     "Parsing job description...",
@@ -402,6 +409,7 @@ export default function DashboardPage() {
 
   async function handleGenerateStructuredResume() {
     if (!selectedJob) return;
+    setRestoredFrom(null);
     setStructuredLoading(true);
     setStructuredError("");
     setProgressSteps(
@@ -457,6 +465,14 @@ export default function DashboardPage() {
     } finally {
       setStructuredLoading(false);
     }
+  }
+
+  function handleRestore(
+    resume: StructuredResume,
+    meta: { version_id: string; company_name: string; created_at: string },
+  ) {
+    setStructuredResume(resume);
+    setRestoredFrom(meta);
   }
 
   async function handleExportResume() {
@@ -1042,6 +1058,33 @@ export default function DashboardPage() {
           )}
           {structuredResume && (
             <div className="mt-4 space-y-2">
+              {restoredFrom && (
+                <div style={{
+                  padding: "8px 14px", borderRadius: 6, marginBottom: 8,
+                  background: "#eff6ff", border: "1px solid #bfdbfe",
+                  display: "flex", alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 12, color: "#1d4ed8",
+                }}>
+                  <span>
+                    Working draft restored from{" "}
+                    <strong>{restoredFrom.company_name}</strong>
+                    {" · "}
+                    {new Date(restoredFrom.created_at).toLocaleDateString()}
+                    {" · "}
+                    <em>Not saved</em>
+                  </span>
+                  <button
+                    onClick={() => setRestoredFrom(null)}
+                    style={{
+                      background: "none", border: "none",
+                      cursor: "pointer", color: "#93c5fd", fontSize: 13,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">Resume Preview</h3>
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 font-medium">
@@ -1051,6 +1094,13 @@ export default function DashboardPage() {
               <StructuredResumePreview resume={structuredResume} />
             </div>
           )}
+
+          <div className="mt-3">
+            <ResumeVersionHistory
+              profileId={PROFILE_ID}
+              onRestore={handleRestore}
+            />
+          </div>
         </section>
       )}
 

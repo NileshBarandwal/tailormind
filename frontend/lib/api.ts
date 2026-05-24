@@ -10,6 +10,10 @@ import type {
   TailoredCoverLetter,
   TailoredResume,
   UserProfile,
+  VersionInsights,
+  VersionListItem,
+  VersionOutcome,
+  VersionSummary,
 } from "@/types";
 
 const API_BASE = "/api";
@@ -375,4 +379,56 @@ export function deleteApplication(
   return apiFetch(`/applications/${profileId}/${appId}`, {
     method: "DELETE",
   });
+}
+
+export function listVersions(
+  profileId: string,
+  limit = 20,
+): Promise<VersionListItem[]> {
+  return apiFetch(`/versions?profile_id=${profileId}&limit=${limit}`);
+}
+
+export function getVersionSummary(
+  versionId: string,
+  profileId: string,
+): Promise<VersionSummary> {
+  return apiFetch(
+    `/versions/${versionId}/summary?profile_id=${profileId}`,
+  );
+}
+
+export function getVersionResume(
+  versionId: string,
+  profileId: string,
+): Promise<StructuredResume> {
+  return apiFetch(
+    `/versions/${versionId}/resume?profile_id=${profileId}`,
+  );
+}
+
+export function updateVersionOutcome(
+  versionId: string,
+  profileId: string,
+  payload: Partial<VersionOutcome>,
+): Promise<VersionOutcome> {
+  return apiFetch(
+    `/versions/${versionId}/outcome?profile_id=${profileId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+}
+
+export function getVersionInsights(
+  profileId: string,
+): Promise<VersionInsights> {
+  return apiFetch(`/versions/insights?profile_id=${profileId}`);
+}
+
+export function deleteVersion(
+  versionId: string,
+  profileId: string,
+): Promise<{ archived: string[] }> {
+  return apiFetch(
+    `/versions/${versionId}?profile_id=${profileId}`,
+    { method: "DELETE" },
+  );
 }

@@ -11,6 +11,7 @@ from backend.api.routes import (
     instructions,
     jobs,
     profile,
+    versions,
 )
 from backend.core.config import settings
 
@@ -33,6 +34,7 @@ app.include_router(applications.router, prefix="/api", tags=["applications"])
 app.include_router(instructions.router, prefix="/api", tags=["instructions"])
 app.include_router(generate.router, prefix="/api", tags=["generate"])
 app.include_router(applications_store.router, prefix="/api", tags=["applications"])
+app.include_router(versions.router, prefix="/api", tags=["versions"])
 
 
 @app.get("/health")

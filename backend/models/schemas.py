@@ -277,3 +277,108 @@ class OnboardingRequest(BaseModel):
     skill_categories: dict[str, str] = Field(default_factory=dict)
     work_experience: list[OnboardingExperience] = Field(default_factory=list)
     projects: list[OnboardingProject] = Field(default_factory=list)
+
+
+class VersionJDMeta(BaseModel):
+    parser_version: str = "1.0"
+    role_title: str = ""
+    required_skills: list[str] = Field(default_factory=list)
+    experience_level: str = ""
+
+
+class VersionInput(BaseModel):
+    jd_text: str = ""
+    jd_meta: VersionJDMeta = Field(default_factory=VersionJDMeta)
+    company_name: str = ""
+    website: str = ""
+    instructions: str = ""
+
+
+class VersionSelectedSource(BaseModel):
+    projects: list[str] = Field(default_factory=list)
+    work: list[str] = Field(default_factory=list)
+    academic: list[str] = Field(default_factory=list)
+
+
+class VersionProfileSnapshot(BaseModel):
+    profile_id: str
+    profile_updated_at: str = ""
+    selected_projects: list[str] = Field(default_factory=list)
+    selected_work: list[str] = Field(default_factory=list)
+    selected_academic: list[str] = Field(default_factory=list)
+    skill_categories_used: list[str] = Field(default_factory=list)
+    jd_keywords_matched: list[str] = Field(default_factory=list)
+    selected_source: VersionSelectedSource = Field(
+        default_factory=VersionSelectedSource
+    )
+
+
+class VersionExportMeta(BaseModel):
+    html_exported: bool = False
+    pdf_exported: bool = False
+    latex_opened: bool = False
+
+
+class VersionOutput(BaseModel):
+    structured_resume: "StructuredResume"
+    export: VersionExportMeta = Field(default_factory=VersionExportMeta)
+
+
+class VersionObservability(BaseModel):
+    target_role: str = ""
+    model_used: str = ""
+    fallback_triggered: bool = False
+    generation_duration_ms: int = 0
+
+
+class ResumeVersionGeneration(BaseModel):
+    version_id: str
+    profile_id: str
+    created_at: str
+    input: VersionInput = Field(default_factory=VersionInput)
+    profile_snapshot: VersionProfileSnapshot
+    output: VersionOutput
+    observability: VersionObservability = Field(
+        default_factory=VersionObservability
+    )
+
+
+class ResumeVersionOutcome(BaseModel):
+    version_id: str
+    profile_id: str
+    status: str = "generated"
+    applied_at: str | None = None
+    last_updated: str = ""
+    notes: str = ""
+
+
+class VersionListItem(BaseModel):
+    version_id: str
+    profile_id: str
+    company_name: str
+    target_role: str
+    created_at: str
+    status: str
+    model_used: str
+    generation_duration_ms: int
+
+
+class VersionSummary(BaseModel):
+    version_id: str
+    company_name: str
+    target_role: str
+    created_at: str
+    status: str
+    selected_projects: list[str]
+
+
+class VersionInsights(BaseModel):
+    total_generated: int
+    total_applied: int
+    total_interview: int
+    total_offer: int
+    applied_rate: float
+    interview_rate: float
+    top_selected_projects: list[dict]
+    role_distribution: list[dict]
+    model_distribution: list[dict]

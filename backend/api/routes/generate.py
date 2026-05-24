@@ -1,4 +1,6 @@
 import json
+import time
+import uuid as _uuid
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -364,6 +366,7 @@ def generate_structured_resume_stream(
         def emit(obj: dict) -> str:
             return f"data: {json.dumps(obj)}\n\n"
 
+        _start_time = time.monotonic()
         try:
             # Step 1: Parse JD
             yield emit({"type": "progress", "step": 1, "total": 4,
@@ -430,8 +433,95 @@ def generate_structured_resume_stream(
                             "message": f"Resume generation failed: {exc}"})
                 return
 
-            yield emit({"type": "done",
-                        "data": result.model_dump(mode="json")})
+            # Build version snapshot and save via shared helper
+            try:
+                from datetime import datetime as _dt, timezone as _tz
+                from backend.api.routes.versions import (
+                    save_version_record as _svr,
+                    make_version_id as _mkid,
+                )
+                from backend.models.schemas import (
+                    ResumeVersionGeneration as _RVG,
+                    VersionInput as _VI,
+                    VersionJDMeta as _VJM,
+                    VersionOutput as _VO,
+                    VersionExportMeta as _VEM,
+                    VersionObservability as _VObs,
+                    VersionProfileSnapshot as _VPS,
+                    VersionSelectedSource as _VSS,
+                )
+                _duration_ms = int((time.monotonic() - _start_time) * 1000)
+                _vid = _mkid()
+                _now = _dt.now(_tz.utc).isoformat()
+
+                _sel_projects = [p.name for p in result.personal_projects]
+                _sel_work = [e.company for e in result.work_experience]
+                _sel_academic = [p.name for p in result.academic_projects]
+
+                _gen = _RVG(
+                    version_id=_vid,
+                    profile_id=request.profile_id,
+                    created_at=_now,
+                    input=_VI(
+                        jd_text=request.jd_text or "",
+                        jd_meta=_VJM(
+                            parser_version="1.0",
+                            role_title=getattr(parsed_jd, "role_title", ""),
+                            required_skills=getattr(
+                                parsed_jd, "required_skills", []
+                            ),
+                            experience_level=getattr(
+                                parsed_jd, "experience_level", ""
+                            ),
+                        ),
+                        company_name=request.company_name or "",
+                        website=request.website or "",
+                        instructions=request.instructions or "",
+                    ),
+                    profile_snapshot=_VPS(
+                        profile_id=request.profile_id,
+                        profile_updated_at=str(
+                            profile_dict.get("updated_at", "")
+                        ),
+                        selected_projects=_sel_projects,
+                        selected_work=_sel_work,
+                        selected_academic=_sel_academic,
+                        skill_categories_used=list(
+                            result.skill_categories.keys()
+                        ),
+                        jd_keywords_matched=getattr(
+                            match, "matched_skills", []
+                        ),
+                        selected_source=_VSS(
+                            projects=_sel_projects,
+                            work=_sel_work,
+                            academic=_sel_academic,
+                        ),
+                    ),
+                    output=_VO(
+                        structured_resume=result,
+                        export=_VEM(),
+                    ),
+                    observability=_VObs(
+                        target_role=getattr(parsed_jd, "role_title", ""),
+                        model_used="groq/llama-3.3-70b-versatile",
+                        fallback_triggered=False,
+                        generation_duration_ms=_duration_ms,
+                    ),
+                )
+                _svr(_gen)
+                yield emit({
+                    "type": "done",
+                    "data": result.model_dump(mode="json"),
+                    "version_id": _vid,
+                })
+            except Exception as _ve:
+                print(f"[versions] auto-save failed: {_ve}")
+                yield emit({
+                    "type": "done",
+                    "data": result.model_dump(mode="json"),
+                })
+            return
 
         except Exception as exc:
             yield emit({"type": "error", "message": str(exc)})

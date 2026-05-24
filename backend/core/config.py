@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+VERSIONS_DIR = PROJECT_ROOT / "data" / "versions"
+VERSIONS_ARCHIVE_DIR = PROJECT_ROOT / "data" / "versions_archive"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(

@@ -202,3 +202,44 @@ export interface StructuredResume {
   jd_keywords_used: string[];
   generated_at: string;
 }
+
+export interface VersionListItem {
+  version_id: string;
+  profile_id: string;
+  company_name: string;
+  target_role: string;
+  created_at: string;
+  status: "generated" | "applied" | "interview" | "rejected" | "offer";
+  model_used: string;
+  generation_duration_ms: number;
+}
+
+export interface VersionSummary {
+  version_id: string;
+  company_name: string;
+  target_role: string;
+  created_at: string;
+  status: "generated" | "applied" | "interview" | "rejected" | "offer";
+  selected_projects: string[];
+}
+
+export interface VersionOutcome {
+  version_id: string;
+  profile_id: string;
+  status: "generated" | "applied" | "interview" | "rejected" | "offer";
+  applied_at: string | null;
+  last_updated: string;
+  notes: string;
+}
+
+export interface VersionInsights {
+  total_generated: number;
+  total_applied: number;
+  total_interview: number;
+  total_offer: number;
+  applied_rate: number;
+  interview_rate: number;
+  top_selected_projects: { name: string; count: number }[];
+  role_distribution: { role: string; count: number }[];
+  model_distribution: { model: string; count: number }[];
+}
