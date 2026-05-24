@@ -150,6 +150,7 @@ export interface GenerationProgressEvent {
 export interface GenerationDoneEvent {
   type: "done";
   data: StructuredResume;
+  version_id?: string;
 }
 
 export interface GenerationErrorEvent {

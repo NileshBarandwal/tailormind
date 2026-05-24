@@ -39,31 +39,60 @@ interface Props {
       created_at: string;
     }
   ) => void;
+  refreshKey?: number;
 }
 
 export default function ResumeVersionHistory({
   profileId,
   onRestore,
+  refreshKey,
 }: Props) {
   const [versions, setVersions] = useState<VersionListItem[]>([]);
   const [insights, setInsights] = useState<VersionInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
+  const [savingNotes, setSavingNotes] = useState<Record<string, boolean>>({});
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!profileId) return;
     setLoading(true);
     listVersions(profileId, 20)
-      .then(setVersions)
+      .then((data) => {
+        setVersions(data);
+        const initial: Record<string, string> = {};
+        data.forEach((v) => { initial[v.version_id] = v.notes ?? ""; });
+        setEditingNotes(initial);
+      })
       .catch(() => setVersions([]))
       .finally(() => setLoading(false));
-  }, [profileId]);
+  }, [profileId, refreshKey]);
 
   function refreshList() {
     listVersions(profileId, 20)
-      .then(setVersions)
+      .then((data) => {
+        setVersions(data);
+        const initial: Record<string, string> = {};
+        data.forEach((v) => { initial[v.version_id] = v.notes ?? ""; });
+        setEditingNotes(initial);
+      })
       .catch(() => {});
+  }
+
+  async function handleSaveNotes(vid: string) {
+    setSavingNotes((s) => ({ ...s, [vid]: true }));
+    try {
+      await updateVersionOutcome(vid, profileId, {
+        notes: editingNotes[vid] ?? "",
+      });
+      refreshList();
+    } catch {
+      // ignore
+    } finally {
+      setSavingNotes((s) => ({ ...s, [vid]: false }));
+    }
   }
 
   function loadInsights() {
@@ -241,70 +270,125 @@ export default function ResumeVersionHistory({
       ) : (
         <div style={{ maxHeight: 320, overflowY: "auto" }}>
           {versions.map((v) => (
-            <div key={v.version_id} style={{
-              padding: "10px 16px", borderBottom: "1px solid #f1f5f9",
-              background: "white", display: "flex",
-              alignItems: "center", gap: 10,
-            }}>
+            <div key={v.version_id}>
               <div style={{
-                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                background: STATUS_COLORS[v.status] ?? "#94a3b8",
-              }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
+                padding: "10px 16px", borderBottom: "1px solid #f1f5f9",
+                background: "white", display: "flex",
+                alignItems: "center", gap: 10,
+              }}>
                 <div style={{
-                  fontSize: 12, fontWeight: 600, color: "#1e293b",
-                  overflow: "hidden", textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}>
-                  {v.company_name || "Unknown"} · {v.target_role || "Unknown role"}
+                  width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                  background: STATUS_COLORS[v.status] ?? "#94a3b8",
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 12, fontWeight: 600, color: "#1e293b",
+                    overflow: "hidden", textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {v.company_name || "Unknown"} · {v.target_role || "Unknown role"}
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: "#94a3b8", marginTop: 1,
+                  }}>
+                    {formatDate(v.created_at)}
+                    {v.generation_duration_ms > 0 && (
+                      <span>
+                        {" "}· {(v.generation_duration_ms / 1000).toFixed(1)}s
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: 11, color: "#94a3b8", marginTop: 1,
-                }}>
-                  {formatDate(v.created_at)}
-                  {v.generation_duration_ms > 0 && (
-                    <span>
-                      {" "}· {(v.generation_duration_ms / 1000).toFixed(1)}s
-                    </span>
-                  )}
-                </div>
+                <select
+                  value={v.status}
+                  onChange={(e) =>
+                    handleStatusChange(v.version_id, e.target.value)
+                  }
+                  style={{
+                    fontSize: 11, padding: "2px 4px", borderRadius: 4,
+                    border: "1px solid #e2e8f0", background: "white",
+                    cursor: "pointer",
+                    color: STATUS_COLORS[v.status] ?? "#94a3b8",
+                  }}
+                >
+                  {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => handleRestore(v)}
+                  style={{
+                    fontSize: 11, padding: "2px 8px", borderRadius: 4,
+                    border: "1px solid #e2e8f0", background: "white",
+                    cursor: "pointer", color: "#3b82f6",
+                  }}
+                >
+                  Restore
+                </button>
+                <button
+                  onClick={() => handleDelete(v.version_id)}
+                  style={{
+                    fontSize: 11, padding: "2px 6px", borderRadius: 4,
+                    border: "none", background: "none",
+                    cursor: "pointer", color: "#ef4444",
+                  }}
+                >
+                  ✕
+                </button>
+                <button
+                  onClick={() =>
+                    setExpandedNotes((s) => ({
+                      ...s,
+                      [v.version_id]: !s[v.version_id],
+                    }))
+                  }
+                  style={{
+                    fontSize: 11, padding: "2px 6px", borderRadius: 4,
+                    border: "none", background: "none",
+                    cursor: "pointer", color: "#94a3b8",
+                  }}
+                  title="Add note"
+                >
+                  📝
+                </button>
               </div>
-              <select
-                value={v.status}
-                onChange={(e) =>
-                  handleStatusChange(v.version_id, e.target.value)
-                }
-                style={{
-                  fontSize: 11, padding: "2px 4px", borderRadius: 4,
-                  border: "1px solid #e2e8f0", background: "white",
-                  cursor: "pointer",
-                  color: STATUS_COLORS[v.status] ?? "#94a3b8",
-                }}
-              >
-                {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => handleRestore(v)}
-                style={{
-                  fontSize: 11, padding: "2px 8px", borderRadius: 4,
-                  border: "1px solid #e2e8f0", background: "white",
-                  cursor: "pointer", color: "#3b82f6",
-                }}
-              >
-                Restore
-              </button>
-              <button
-                onClick={() => handleDelete(v.version_id)}
-                style={{
-                  fontSize: 11, padding: "2px 6px", borderRadius: 4,
-                  border: "none", background: "none",
-                  cursor: "pointer", color: "#ef4444",
-                }}
-              >
-                ✕
-              </button>
+              {expandedNotes[v.version_id] && (
+                <div style={{
+                  padding: "8px 16px 10px",
+                  borderBottom: "1px solid #f1f5f9",
+                  background: "#fafafa",
+                  display: "flex", gap: 8, alignItems: "flex-start",
+                }}>
+                  <textarea
+                    rows={2}
+                    placeholder="Add a note: e.g. Emphasized FastAPI, Reduced project count..."
+                    value={editingNotes[v.version_id] ?? ""}
+                    onChange={(e) =>
+                      setEditingNotes((s) => ({
+                        ...s,
+                        [v.version_id]: e.target.value,
+                      }))
+                    }
+                    style={{
+                      flex: 1, fontSize: 12, padding: "6px 8px",
+                      borderRadius: 4, border: "1px solid #e2e8f0",
+                      resize: "vertical", fontFamily: "inherit",
+                    }}
+                  />
+                  <button
+                    onClick={() => handleSaveNotes(v.version_id)}
+                    disabled={savingNotes[v.version_id]}
+                    style={{
+                      fontSize: 12, padding: "5px 12px", borderRadius: 4,
+                      background: "#3b82f6", color: "white", border: "none",
+                      cursor: savingNotes[v.version_id] ? "default" : "pointer",
+                      opacity: savingNotes[v.version_id] ? 0.6 : 1,
+                    }}
+                  >
+                    {savingNotes[v.version_id] ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

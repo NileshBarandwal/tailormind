@@ -134,6 +134,9 @@ export default function DashboardPage() {
     created_at: string;
   } | null>(null);
 
+  const [versionRefreshKey, setVersionRefreshKey] = useState(0);
+  const [versionSavedId, setVersionSavedId] = useState<string | null>(null);
+
   const GENERATION_STEPS = [
     "Parsing job description...",
     "Researching company...",
@@ -410,6 +413,7 @@ export default function DashboardPage() {
   async function handleGenerateStructuredResume() {
     if (!selectedJob) return;
     setRestoredFrom(null);
+    setVersionSavedId(null);
     setStructuredLoading(true);
     setStructuredError("");
     setProgressSteps(
@@ -437,6 +441,10 @@ export default function DashboardPage() {
               prev.map((s) => ({ ...s, status: "done" as const })),
             );
             setStructuredResume(event.data);
+            setVersionRefreshKey((k) => k + 1);
+            if (event.version_id) {
+              setVersionSavedId(event.version_id);
+            }
             if (selectedJob?.url) {
               const k = jobKey(selectedJob.url);
               lsSet(JOB_KEYS.structuredResume(k), event.data);
@@ -1085,6 +1093,26 @@ export default function DashboardPage() {
                   </button>
                 </div>
               )}
+              {versionSavedId && !restoredFrom && (
+                <div style={{
+                  padding: "8px 14px", borderRadius: 6, marginBottom: 8,
+                  background: "#f0fdf4", border: "1px solid #bbf7d0",
+                  display: "flex", alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 12, color: "#15803d",
+                }}>
+                  <span>✓ Version saved</span>
+                  <button
+                    onClick={() => setVersionSavedId(null)}
+                    style={{
+                      background: "none", border: "none",
+                      cursor: "pointer", color: "#86efac", fontSize: 13,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">Resume Preview</h3>
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 font-medium">
@@ -1099,6 +1127,7 @@ export default function DashboardPage() {
             <ResumeVersionHistory
               profileId={PROFILE_ID}
               onRestore={handleRestore}
+              refreshKey={versionRefreshKey}
             />
           </div>
         </section>

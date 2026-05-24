@@ -361,6 +361,7 @@ class VersionListItem(BaseModel):
     status: str
     model_used: str
     generation_duration_ms: int
+    notes: str = ""
 
 
 class VersionSummary(BaseModel):

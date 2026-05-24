@@ -212,6 +212,7 @@ export interface VersionListItem {
   status: "generated" | "applied" | "interview" | "rejected" | "offer";
   model_used: string;
   generation_duration_ms: number;
+  notes: string;
 }
 
 export interface VersionSummary {

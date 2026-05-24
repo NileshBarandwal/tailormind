@@ -107,9 +107,11 @@ def list_versions(profile_id: str, limit: int = 20) -> list[VersionListItem]:
             g = json.loads(gf.read_text(encoding="utf-8"))
             out_file = _out_path(profile_id, vid)
             status = "generated"
+            notes = ""
             if out_file.exists():
                 o = json.loads(out_file.read_text(encoding="utf-8"))
                 status = o.get("status", "generated")
+                notes = o.get("notes", "")
             items.append(VersionListItem(
                 version_id=vid,
                 profile_id=profile_id,
@@ -121,6 +123,7 @@ def list_versions(profile_id: str, limit: int = 20) -> list[VersionListItem]:
                 generation_duration_ms=g.get("observability", {}).get(
                     "generation_duration_ms", 0
                 ),
+                notes=notes,
             ))
         except Exception:
             continue
