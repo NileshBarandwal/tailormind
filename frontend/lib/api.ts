@@ -5,6 +5,7 @@ import type {
   InstructionSet,
   JobListing,
   MatchScore,
+  PoolProfile,
   SavedApplication,
   StructuredResume,
   TailoredCoverLetter,
@@ -432,4 +433,18 @@ export function deleteVersion(
     `/versions/${versionId}?profile_id=${profileId}`,
     { method: "DELETE" },
   );
+}
+
+export function getProfilePool(profileId: string): Promise<PoolProfile> {
+  return apiFetch(`/profile/${profileId}/pool`);
+}
+
+export function updateProfilePool(
+  profileId: string,
+  payload: Omit<PoolProfile, "updated_at">,
+): Promise<{ status: string; profile_id: string; updated_at: string }> {
+  return apiFetch(`/profile/${profileId}/pool`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }

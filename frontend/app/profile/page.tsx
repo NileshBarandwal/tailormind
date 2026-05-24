@@ -1,215 +1,241 @@
 "use client";
-
-import { useEffect, useState, type KeyboardEvent } from "react";
-import type { UserProfile } from "@/types";
-import { getProfile, saveProfile } from "@/lib/api";
-import { getActiveProfileId } from "@/lib/persistence";
+import { useEffect, useState } from "react";
+import type { PoolProfile } from "@/types";
+import { getProfilePool, updateProfilePool } from "@/lib/api";
+import { getActiveProfileId, lsGet, lsSet } from "@/lib/persistence";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import ProfileCompleteness from "@/components/profile/ProfileCompleteness";
+import BasicInfoSection from "@/components/profile/BasicInfoSection";
+import ExperienceSection from "@/components/profile/ExperienceSection";
+import ProjectsSection from "@/components/profile/ProjectsSection";
+import AcademicProjectsSection from "@/components/profile/AcademicProjectsSection";
+import EducationSection from "@/components/profile/EducationSection";
+import SkillsSection from "@/components/profile/SkillsSection";
+import PositionsSection from "@/components/profile/PositionsSection";
+
+const SECTIONS_KEY = "tm_profile_sections_open";
+
+const DEFAULT_OPEN: Record<string, boolean> = {
+  experience: false,
+  projects: false,
+  academic: false,
+  education: false,
+  skills: false,
+  positions: false,
+};
+
+const EDITABLE_FIELDS = [
+  "full_name", "email", "phone", "github_url", "linkedin_url",
+  "iit_email", "summary", "work_experience", "projects",
+  "academic_projects", "education", "skill_categories", "positions",
+] as const;
+
+function getEditableSnapshot(p: PoolProfile): string {
+  return JSON.stringify(
+    EDITABLE_FIELDS.reduce((acc, k) => {
+      (acc as Record<string, unknown>)[k] = p[k as keyof PoolProfile];
+      return acc;
+    }, {} as Partial<PoolProfile>)
+  );
+}
+
+function computeCompleteness(pool: PoolProfile): number {
+  let score = 0;
+  if ((pool.work_experience?.length ?? 0) > 0) score += 25;
+  if ((pool.projects?.length ?? 0) > 0) score += 25;
+  if ((pool.education?.length ?? 0) > 0) score += 25;
+  if (Object.keys(pool.skill_categories ?? {}).length > 0) score += 25;
+  return score;
+}
 
 export default function ProfilePage() {
   const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [pool, setPool] = useState<PoolProfile | null>(null);
+  const [draft, setDraft] = useState<PoolProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [summary, setSummary] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [newSkill, setNewSkill] = useState("");
-
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [saveResult, setSaveResult] = useState<{
+    ok: boolean; message: string; updatedAt?: string;
+  } | null>(null);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    () => lsGet<Record<string, boolean>>(SECTIONS_KEY) ?? DEFAULT_OPEN
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setLoadError("");
-      try {
-        const data = await getProfile(PROFILE_ID);
-        if (cancelled) return;
-        setProfile(data);
-        setFullName(data.full_name);
-        setEmail(data.email);
-        setPhone(data.phone);
-        setSummary(data.summary);
-        setSkills(data.skills);
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    setLoadError("");
+    getProfilePool(PROFILE_ID)
+      .then((data) => { setPool(data); setDraft(data); })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : "Failed"))
+      .finally(() => setLoading(false));
   }, []);
 
-  function addSkill() {
-    const value = newSkill.trim();
-    if (!value || skills.includes(value)) {
-      setNewSkill("");
-      return;
-    }
-    setSkills([...skills, value]);
-    setNewSkill("");
+  const isDirty =
+    pool !== null &&
+    draft !== null &&
+    getEditableSnapshot(pool) !== getEditableSnapshot(draft);
+
+  function toggleSection(key: string) {
+    const updated = { ...openSections, [key]: !openSections[key] };
+    setOpenSections(updated);
+    lsSet(SECTIONS_KEY, updated);
   }
 
-  function removeSkill(skill: string) {
-    setSkills(skills.filter((s) => s !== skill));
-  }
-
-  function handleSkillKey(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addSkill();
-    }
+  function handleCancel() {
+    setDraft(pool);
+    setSaveResult(null);
   }
 
   async function handleSave() {
-    if (!profile) return;
+    if (!draft) return;
     setSaving(true);
-    setSaveMessage("");
-    const updated: UserProfile = {
-      ...profile,
-      full_name: fullName,
-      email,
-      phone,
-      summary,
-      skills,
-      updated_at: new Date().toISOString(),
-    };
+    setSaveResult(null);
     try {
-      const result = await saveProfile(updated);
-      setSaveMessage(`Saved as ${result.profile_id}`);
-      setProfile(updated);
+      const result = await updateProfilePool(PROFILE_ID, draft);
+      const updated = { ...draft, updated_at: result.updated_at };
+      setPool(updated);
+      setDraft(updated);
+      setSaveResult({ ok: true, message: "✓ Profile updated", updatedAt: result.updated_at });
     } catch (e) {
-      setSaveMessage(e instanceof Error ? e.message : "Save failed");
+      setSaveResult({ ok: false, message: e instanceof Error ? e.message : "Save failed" });
     } finally {
       setSaving(false);
     }
   }
 
+  function patchDraft(patch: Partial<PoolProfile>) {
+    setDraft((d) => d ? { ...d, ...patch } : d);
+    setSaveResult(null);
+  }
+
+  function Section({ id, label, children }: {
+    id: string; label: string; children: React.ReactNode;
+  }) {
+    const open = openSections[id] ?? false;
+    return (
+      <div style={{ border: "1px solid #e2e8f0", borderRadius: 8,
+        overflow: "hidden", marginBottom: 8 }}>
+        <button type="button" onClick={() => toggleSection(id)}
+          style={{ width: "100%", padding: "12px 16px",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            background: "white", border: "none", cursor: "pointer",
+            fontSize: 14, fontWeight: 600, color: "#1e293b", textAlign: "left" }}>
+          <span>{label}</span>
+          <span style={{ color: "#94a3b8", fontSize: 12 }}>{open ? "▲" : "▼"}</span>
+        </button>
+        {open && (
+          <div style={{ padding: "12px 16px",
+            borderTop: "1px solid #e2e8f0", background: "#fafafa" }}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (loading) return <LoadingSpinner message="Loading profile..." />;
-  if (loadError) return <p className="text-sm text-red-600">{loadError}</p>;
+  if (loadError || !draft) return (
+    <p className="text-sm text-red-600">{loadError || "No profile found"}</p>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 max-w-3xl">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-        <p className="text-sm text-slate-600">
-          Edit your top-level profile fields. Experiences, projects, and
-          education are managed via the JSON file directly for now.
-        </p>
       </header>
 
-      <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm">
-            <span className="block text-slate-700">Full name</span>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="block text-slate-700">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="block text-slate-700">Phone</span>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm md:col-span-2">
-            <span className="block text-slate-700">Summary</span>
-            <textarea
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              rows={4}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
-        </div>
+      <ProfileCompleteness score={computeCompleteness(draft)} updatedAt={draft.updated_at} />
 
-        <div className="text-sm">
-          <p className="text-slate-700">Skills</p>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {skills.map((s) => (
-              <span
-                key={s}
-                className="flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
-              >
-                {s}
-                <button
-                  type="button"
-                  onClick={() => removeSkill(s)}
-                  className="text-blue-700 hover:text-blue-900"
-                  aria-label={`Remove ${s}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            {skills.length === 0 && (
-              <span className="text-xs italic text-slate-500">No skills yet.</span>
-            )}
-          </div>
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              onKeyDown={handleSkillKey}
-              placeholder="Type a skill and press Enter"
-              className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
-            />
-            <button
-              type="button"
-              onClick={addSkill}
-              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-            >
-              Add
-            </button>
-          </div>
-        </div>
+      <div style={{ border: "1px solid #e2e8f0", borderRadius: 8,
+        padding: "16px", background: "white" }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 14 }}>
+          Basic Info
+        </h2>
+        <BasicInfoSection data={draft} onChange={patchDraft} />
+      </div>
 
-        <div>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save Profile"}
+      <Section id="experience" label="Work Experience">
+        <ExperienceSection
+          entries={draft.work_experience ?? []}
+          onChange={(v) => patchDraft({ work_experience: v })}
+        />
+      </Section>
+
+      <Section id="projects" label="Projects">
+        <ProjectsSection
+          entries={draft.projects ?? []}
+          onChange={(v) => patchDraft({ projects: v })}
+        />
+      </Section>
+
+      <Section id="academic" label="Academic Projects">
+        <AcademicProjectsSection
+          entries={draft.academic_projects ?? []}
+          onChange={(v) => patchDraft({ academic_projects: v })}
+        />
+      </Section>
+
+      <Section id="education" label="Education">
+        <EducationSection
+          entries={draft.education ?? []}
+          onChange={(v) => patchDraft({ education: v })}
+        />
+      </Section>
+
+      <Section id="skills" label="Skills">
+        <SkillsSection
+          categories={draft.skill_categories ?? {}}
+          onChange={(v) => patchDraft({ skill_categories: v })}
+        />
+      </Section>
+
+      <Section id="positions" label="Positions & Leadership">
+        <PositionsSection
+          positions={draft.positions ?? []}
+          onChange={(v) => patchDraft({ positions: v })}
+        />
+      </Section>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0" }}>
+        {isDirty && (
+          <button type="button" onClick={handleCancel}
+            style={{ padding: "8px 20px", borderRadius: 5,
+              border: "1px solid #cbd5e1", background: "white",
+              fontSize: 13, cursor: "pointer", color: "#374151" }}>
+            Cancel
           </button>
-          {saveMessage && (
-            <p
-              className={`mt-2 text-sm ${
-                saveMessage.startsWith("Saved")
-                  ? "text-green-700"
-                  : "text-red-600"
-              }`}
-            >
-              {saveMessage}
-            </p>
-          )}
-        </div>
-      </section>
+        )}
+        <button type="button" onClick={handleSave}
+          disabled={saving || !isDirty}
+          style={{ padding: "8px 20px", borderRadius: 5,
+            background: isDirty ? "#3b82f6" : "#e2e8f0",
+            color: isDirty ? "white" : "#94a3b8",
+            border: "none", fontSize: 13, fontWeight: 500,
+            cursor: isDirty && !saving ? "pointer" : "default" }}>
+          {saving ? "Saving..." : "Save Profile"}
+        </button>
+        {isDirty && (
+          <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 500 }}>
+            ● Unsaved changes
+          </span>
+        )}
+        {saveResult && (
+          <span style={{ fontSize: 12,
+            color: saveResult.ok ? "#15803d" : "#dc2626", fontWeight: 500 }}>
+            {saveResult.message}
+            {saveResult.ok && saveResult.updatedAt && (
+              <span style={{ fontWeight: 400, marginLeft: 6 }}>
+                Last updated:{" "}
+                {new Date(saveResult.updatedAt).toLocaleString("en-IN", {
+                  day: "numeric", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit",
+                })}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

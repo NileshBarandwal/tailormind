@@ -383,3 +383,28 @@ class VersionInsights(BaseModel):
     top_selected_projects: list[dict]
     role_distribution: list[dict]
     model_distribution: list[dict]
+
+
+class PoolAcademicProject(BaseModel):
+    name: str = ""
+    context: str = ""
+    guide: str = ""
+    year: int = 2024
+    tech_stack: str = ""
+    bullets: list[str] = Field(default_factory=list)
+
+
+class PoolUpdateRequest(BaseModel):
+    full_name: str = ""
+    email: str = ""
+    phone: str = ""
+    github_url: str = ""
+    linkedin_url: str = ""
+    iit_email: str = ""
+    summary: str = ""
+    education: list[OnboardingEducation] = Field(default_factory=list)
+    skill_categories: dict[str, str] = Field(default_factory=dict)
+    work_experience: list[OnboardingExperience] = Field(default_factory=list)
+    projects: list[OnboardingProject] = Field(default_factory=list)
+    academic_projects: list[PoolAcademicProject] = Field(default_factory=list)
+    positions: list[str] = Field(default_factory=list)

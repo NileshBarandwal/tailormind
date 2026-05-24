@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from backend.core.config import PROJECT_ROOT
-from backend.models.schemas import OnboardingRequest, UserProfile
+from backend.models.schemas import OnboardingRequest, PoolUpdateRequest, UserProfile
 
 
 router = APIRouter()
@@ -105,3 +105,54 @@ def get_profile(profile_id: str) -> UserProfile:
         raise HTTPException(
             status_code=500, detail=f"Profile format error: {exc}"
         )
+
+
+EDITABLE_FIELDS = [
+    "full_name", "email", "phone", "github_url", "linkedin_url",
+    "iit_email", "summary", "work_experience", "projects",
+    "academic_projects", "education", "skill_categories", "positions",
+]
+
+
+@router.get("/profile/{profile_id}/pool")
+def get_profile_pool(profile_id: str) -> dict:
+    path = _profile_path(profile_id)
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Profile '{profile_id}' not found"
+        )
+    import json as _json
+    return _json.loads(path.read_text(encoding="utf-8"))
+
+
+@router.patch("/profile/{profile_id}/pool")
+def update_profile_pool(
+    profile_id: str, request: PoolUpdateRequest
+) -> dict[str, str]:
+    from datetime import datetime, timezone
+    import json as _json
+    path = _profile_path(profile_id)
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Profile '{profile_id}' not found"
+        )
+    existing = _json.loads(path.read_text(encoding="utf-8"))
+    incoming = request.model_dump(mode="json", exclude_unset=True)
+    for field in EDITABLE_FIELDS:
+        if field in incoming:
+            existing[field] = incoming[field]
+    existing["skills"] = [
+        s.strip()
+        for v in existing.get("skill_categories", {}).values()
+        for s in v.split(",")
+        if s.strip()
+    ]
+    now = datetime.now(timezone.utc).isoformat()
+    existing["updated_at"] = now
+    path.write_text(
+        _json.dumps(existing, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return {"status": "updated", "profile_id": profile_id, "updated_at": now}

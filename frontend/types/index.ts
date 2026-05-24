@@ -244,3 +244,54 @@ export interface VersionInsights {
   role_distribution: { role: string; count: number }[];
   model_distribution: { model: string; count: number }[];
 }
+
+export interface PoolWorkExperience {
+  company: string;
+  role: string;
+  duration: string;
+  guide: string;
+  bullets: string[];
+}
+
+export interface PoolProject {
+  name: string;
+  tech_stack: string;
+  category: string;
+  live_url: string;
+  repo_url: string;
+  bullets: string[];
+}
+
+export interface PoolAcademicProject {
+  name: string;
+  context: string;
+  guide: string;
+  year: number;
+  tech_stack: string;
+  bullets: string[];
+}
+
+export interface PoolEducation {
+  examination: string;
+  university: string;
+  institute: string;
+  year: number;
+  cgpa: string;
+}
+
+export interface PoolProfile {
+  full_name: string;
+  email: string;
+  phone: string;
+  github_url: string;
+  linkedin_url: string;
+  iit_email: string;
+  summary: string;
+  updated_at: string;
+  work_experience: PoolWorkExperience[];
+  projects: PoolProject[];
+  academic_projects: PoolAcademicProject[];
+  education: PoolEducation[];
+  skill_categories: Record<string, string>;
+  positions: string[];
+}
