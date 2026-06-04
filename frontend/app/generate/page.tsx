@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ApplicationCard,
   StructuredResume,
@@ -21,7 +21,6 @@ import {
   lsGet,
   lsSet,
   JOB_KEYS,
-  GLOBAL_KEYS,
 } from "@/lib/persistence";
 import ApplicationCardView from "@/components/ApplicationCardView";
 import CoverLetterPreview from "@/components/CoverLetterPreview";
@@ -32,6 +31,14 @@ import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 import { getActiveProfileId } from "@/lib/persistence";
+import {
+  TAILORING_CHIPS,
+  composeInstructions,
+  restoreTailoring,
+  saveTailoring,
+  clearTailoring,
+  completeTailoringMigration,
+} from "@/lib/tailoring";
 
 export default function GeneratePage() {
   const PROFILE_ID = getActiveProfileId() ?? "nbarandwal_gmail_com";
@@ -39,7 +46,19 @@ export default function GeneratePage() {
   const [companyName, setCompanyName] = useState("");
   const [website, setWebsite] = useState("");
   const [jobUrl, setJobUrl] = useState("");
-  const [instructions, setInstructions] = useState("");
+
+  const [selectedChips, setSelectedChips] = useState<Set<string>>(
+    new Set<string>()
+  );
+  const [additionalInstructions, setAdditionalInstructions] = useState("");
+  const [customEmphasis, setCustomEmphasis] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const compiledInstructions = composeInstructions(
+    selectedChips,
+    additionalInstructions,
+    customEmphasis,
+  );
 
   const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
@@ -81,9 +100,22 @@ export default function GeneratePage() {
   const canGenerate =
     jdText.trim().length >= 50 && companyName.trim() && website.trim();
 
+  const prevCompiledRef = useRef("");
   useEffect(() => {
-    const savedInstructions = lsGet<string>(GLOBAL_KEYS.instructions);
-    if (savedInstructions) setInstructions(savedInstructions);
+    if (
+      prevCompiledRef.current.trim() === "" &&
+      compiledInstructions.trim() !== ""
+    ) {
+      setPreviewOpen(true);
+    }
+    prevCompiledRef.current = compiledInstructions;
+  }, [compiledInstructions]);
+
+  useEffect(() => {
+    const tailoring = restoreTailoring();
+    setSelectedChips(tailoring.chips);
+    setAdditionalInstructions(tailoring.additional);
+    setCustomEmphasis(tailoring.customEmphasis);
     const lastKey = lsGet<string>("tm_generate_last_key");
     if (lastKey) {
       const sr = lsGet<StructuredResume>(JOB_KEYS.structuredResume(lastKey));
@@ -99,12 +131,36 @@ export default function GeneratePage() {
     }
   }, []);
 
+  function handleClearTailoring() {
+    const empty = clearTailoring();
+    setSelectedChips(empty.chips);
+    setAdditionalInstructions(empty.additional);
+    setCustomEmphasis(empty.customEmphasis);
+    setPreviewOpen(false);
+  }
+
+  function handleChipToggle(key: string) {
+    const next = new Set(selectedChips);
+    if (next.has(key)) {
+      next.delete(key);
+      if (key === "custom") setCustomEmphasis("");
+    } else {
+      next.add(key);
+    }
+    setSelectedChips(next);
+    saveTailoring({
+      chips: next,
+      additional: additionalInstructions,
+      customEmphasis,
+    });
+  }
+
   async function handleGenerateResume() {
     setResumeLoading(true);
     setResumeError("");
     try {
       setResume(
-        await generateResume(PROFILE_ID, jdText, companyName, website, instructions),
+        await generateResume(PROFILE_ID, jdText, companyName, website, compiledInstructions),
       );
     } catch (e) {
       setResumeError(e instanceof Error ? e.message : "Generation failed");
@@ -122,7 +178,7 @@ export default function GeneratePage() {
         jdText,
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setCoverLetter(l);
       if (companyName) {
@@ -149,7 +205,7 @@ export default function GeneratePage() {
         companyName,
         website,
         jobUrl,
-        instructions,
+        compiledInstructions,
       );
       setCard(c);
       if (companyName) {
@@ -179,7 +235,7 @@ export default function GeneratePage() {
         jdText,
         companyName,
         website,
-        instructions,
+        compiledInstructions,
         (event: GenerationEvent) => {
           if (event.type === "progress") {
             setProgressSteps((prev) =>
@@ -195,6 +251,7 @@ export default function GeneratePage() {
               prev.map((s) => ({ ...s, status: "done" as const })),
             );
             setStructuredResume(event.data);
+            completeTailoringMigration();
             if (event.version_id) {
               setVersionSavedId(event.version_id);
             }
@@ -236,7 +293,7 @@ export default function GeneratePage() {
         jdText,
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setResumeExportMsg(`Saved to ${out.filename}`);
     } catch (e) {
@@ -255,7 +312,7 @@ export default function GeneratePage() {
         jdText,
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setLetterExportMsg(`Saved to ${out.filename}`);
     } catch (e) {
@@ -317,18 +374,114 @@ export default function GeneratePage() {
               className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
             />
           </label>
-          <label className="text-sm md:col-span-2">
-            <span className="block text-slate-700">Instructions</span>
-            <textarea
-              value={instructions}
-              onChange={(e) => {
-                setInstructions(e.target.value);
-                lsSet(GLOBAL_KEYS.instructions, e.target.value);
-              }}
-              rows={3}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-            />
-          </label>
+          <div className="md:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-700">
+                Tailoring preferences
+              </span>
+              {(selectedChips.size > 0 ||
+                additionalInstructions.trim() ||
+                customEmphasis.trim()) && (
+                <button
+                  type="button"
+                  onClick={handleClearTailoring}
+                  className="text-xs text-slate-400 hover:text-slate-600 underline"
+                >
+                  Clear tailoring preferences
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {TAILORING_CHIPS.map((chip) => {
+                const selected = selectedChips.has(chip.key);
+                return (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => handleChipToggle(chip.key)}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: selected ? "1px solid #3b82f6" : "1px solid #cbd5e1",
+                      background: selected ? "#eff6ff" : "white",
+                      color: selected ? "#1d4ed8" : "#475569",
+                      cursor: "pointer",
+                      transition: "all 0.1s",
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedChips.has("custom") && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 whitespace-nowrap">
+                  Focus area:
+                </span>
+                <input
+                  type="text"
+                  value={customEmphasis}
+                  onChange={(e) => {
+                    setCustomEmphasis(e.target.value);
+                    saveTailoring({
+                      chips: selectedChips,
+                      additional: additionalInstructions,
+                      customEmphasis: e.target.value,
+                    });
+                  }}
+                  placeholder="e.g. distributed systems, real-time ML"
+                  className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
+                />
+              </div>
+            )}
+
+            <div>
+              <span className="block text-xs text-slate-500 mb-1">
+                Additional instructions (optional)
+              </span>
+              <textarea
+                value={additionalInstructions}
+                onChange={(e) => {
+                  setAdditionalInstructions(e.target.value);
+                  saveTailoring({
+                    chips: selectedChips,
+                    additional: e.target.value,
+                    customEmphasis,
+                  });
+                }}
+                rows={2}
+                placeholder="Any other instructions..."
+                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            {compiledInstructions.trim() && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((v) => !v)}
+                  className="text-xs text-slate-400 hover:text-slate-600
+                    flex items-center gap-1"
+                >
+                  {previewOpen ? "▼" : "▶"} Compiled instruction
+                </button>
+                {previewOpen && (
+                  <div
+                    className="mt-1 rounded border border-slate-200 bg-slate-50
+                      px-3 py-2 text-xs text-slate-600"
+                    style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  >
+                    {compiledInstructions}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">

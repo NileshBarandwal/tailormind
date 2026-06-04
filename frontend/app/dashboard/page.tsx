@@ -38,7 +38,6 @@ import {
   lsSet,
   lsDel,
   JOB_KEYS,
-  GLOBAL_KEYS,
   getActiveProfileId,
   setActiveProfileId,
 } from "@/lib/persistence";
@@ -55,6 +54,14 @@ import { classifyError } from "@/lib/errorMessage";
 import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 import ResumeVersionHistory from "@/components/ResumeVersionHistory";
+import {
+  TAILORING_CHIPS,
+  composeInstructions,
+  restoreTailoring,
+  saveTailoring,
+  clearTailoring,
+  completeTailoringMigration,
+} from "@/lib/tailoring";
 
 
 const ROLE_PRESETS = [
@@ -106,9 +113,32 @@ export default function DashboardPage() {
   const [website, setWebsite] = useState("");
   const [companySearchUrl, setCompanySearchUrl] = useState("");
   const [jobUrl, setJobUrl] = useState("");
-  const [instructions, setInstructions] = useState("");
+
+  const [selectedChips, setSelectedChips] = useState<Set<string>>(
+    new Set<string>()
+  );
+  const [additionalInstructions, setAdditionalInstructions] = useState("");
+  const [customEmphasis, setCustomEmphasis] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const compiledInstructions = composeInstructions(
+    selectedChips,
+    additionalInstructions,
+    customEmphasis,
+  );
 
   const generationRef = useRef<HTMLDivElement>(null);
+
+  const prevCompiledRef = useRef("");
+  useEffect(() => {
+    if (
+      prevCompiledRef.current.trim() === "" &&
+      compiledInstructions.trim() !== ""
+    ) {
+      setPreviewOpen(true);
+    }
+    prevCompiledRef.current = compiledInstructions;
+  }, [compiledInstructions]);
 
   const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
@@ -210,8 +240,10 @@ export default function DashboardPage() {
     }
 
     // Restore global persisted state
-    const savedInstructions = lsGet<string>(GLOBAL_KEYS.instructions);
-    if (savedInstructions) setInstructions(savedInstructions);
+    const tailoring = restoreTailoring();
+    setSelectedChips(tailoring.chips);
+    setAdditionalInstructions(tailoring.additional);
+    setCustomEmphasis(tailoring.customEmphasis);
 
     return () => {
       cancelled = true;
@@ -350,7 +382,7 @@ export default function DashboardPage() {
         buildJdText(),
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setResume(r);
       refreshMatchScore();
@@ -371,7 +403,7 @@ export default function DashboardPage() {
         buildJdText(),
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setCoverLetter(l);
       if (selectedJob?.url) {
@@ -396,7 +428,7 @@ export default function DashboardPage() {
         companyName,
         website,
         jobUrl,
-        instructions,
+        compiledInstructions,
       );
       setCard(c);
       if (selectedJob?.url) {
@@ -425,7 +457,7 @@ export default function DashboardPage() {
         buildJdText(),
         companyName,
         website,
-        instructions,
+        compiledInstructions,
         (event: GenerationEvent) => {
           if (event.type === "progress") {
             setProgressSteps((prev) =>
@@ -442,6 +474,7 @@ export default function DashboardPage() {
             );
             setStructuredResume(event.data);
             setVersionRefreshKey((k) => k + 1);
+            completeTailoringMigration();
             if (event.version_id) {
               setVersionSavedId(event.version_id);
             }
@@ -483,6 +516,30 @@ export default function DashboardPage() {
     setRestoredFrom(meta);
   }
 
+  function handleClearTailoring() {
+    const empty = clearTailoring();
+    setSelectedChips(empty.chips);
+    setAdditionalInstructions(empty.additional);
+    setCustomEmphasis(empty.customEmphasis);
+    setPreviewOpen(false);
+  }
+
+  function handleChipToggle(key: string) {
+    const next = new Set(selectedChips);
+    if (next.has(key)) {
+      next.delete(key);
+      if (key === "custom") setCustomEmphasis("");
+    } else {
+      next.add(key);
+    }
+    setSelectedChips(next);
+    saveTailoring({
+      chips: next,
+      additional: additionalInstructions,
+      customEmphasis,
+    });
+  }
+
   async function handleExportResume() {
     setExportingResume(true);
     setResumeExportMsg(undefined);
@@ -492,7 +549,7 @@ export default function DashboardPage() {
         buildJdText(),
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setResumeExportMsg(`Saved to ${out.filename}`);
     } catch (e) {
@@ -511,7 +568,7 @@ export default function DashboardPage() {
         buildJdText(),
         companyName,
         website,
-        instructions,
+        compiledInstructions,
       );
       setLetterExportMsg(`Saved to ${out.filename}`);
     } catch (e) {
@@ -905,18 +962,114 @@ export default function DashboardPage() {
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
               />
             </label>
-            <label className="text-sm md:col-span-2">
-              <span className="block text-slate-700">Any specific instructions?</span>
-              <textarea
-                value={instructions}
-                onChange={(e) => {
-                  setInstructions(e.target.value);
-                  lsSet(GLOBAL_KEYS.instructions, e.target.value);
-                }}
-                rows={3}
-                className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-              />
-            </label>
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">
+                  Tailoring preferences
+                </span>
+                {(selectedChips.size > 0 ||
+                  additionalInstructions.trim() ||
+                  customEmphasis.trim()) && (
+                  <button
+                    type="button"
+                    onClick={handleClearTailoring}
+                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                  >
+                    Clear tailoring preferences
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {TAILORING_CHIPS.map((chip) => {
+                  const selected = selectedChips.has(chip.key);
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => handleChipToggle(chip.key)}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        border: selected ? "1px solid #3b82f6" : "1px solid #cbd5e1",
+                        background: selected ? "#eff6ff" : "white",
+                        color: selected ? "#1d4ed8" : "#475569",
+                        cursor: "pointer",
+                        transition: "all 0.1s",
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedChips.has("custom") && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">
+                    Focus area:
+                  </span>
+                  <input
+                    type="text"
+                    value={customEmphasis}
+                    onChange={(e) => {
+                      setCustomEmphasis(e.target.value);
+                      saveTailoring({
+                        chips: selectedChips,
+                        additional: additionalInstructions,
+                        customEmphasis: e.target.value,
+                      });
+                    }}
+                    placeholder="e.g. distributed systems, real-time ML"
+                    className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
+                  />
+                </div>
+              )}
+
+              <div>
+                <span className="block text-xs text-slate-500 mb-1">
+                  Additional instructions (optional)
+                </span>
+                <textarea
+                  value={additionalInstructions}
+                  onChange={(e) => {
+                    setAdditionalInstructions(e.target.value);
+                    saveTailoring({
+                      chips: selectedChips,
+                      additional: e.target.value,
+                      customEmphasis,
+                    });
+                  }}
+                  rows={2}
+                  placeholder="Any other instructions..."
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              {compiledInstructions.trim() && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen((v) => !v)}
+                    className="text-xs text-slate-400 hover:text-slate-600
+                      flex items-center gap-1"
+                  >
+                    {previewOpen ? "▼" : "▶"} Compiled instruction
+                  </button>
+                  {previewOpen && (
+                    <div
+                      className="mt-1 rounded border border-slate-200 bg-slate-50
+                        px-3 py-2 text-xs text-slate-600"
+                      style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                    >
+                      {compiledInstructions}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">

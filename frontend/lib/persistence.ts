@@ -68,6 +68,10 @@ export const JOB_KEYS = {
 export const GLOBAL_KEYS = {
   instructions: "tm_instructions",
   previewTab:   "tm_preview_tab",
+  chipSelections: "tm_chip_selections",
+  additionalText: "tm_additional_text",
+  customEmphasis: "tm_custom_emphasis",
+  tailoringMigrated: "tm_tailoring_migrated",
 };
 
 // Active profile ID — stored in localStorage
