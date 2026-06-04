@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -7,7 +6,6 @@ from pydantic import BaseModel
 from backend.agents.jd_parser import JDParser
 from backend.agents.profile_matcher import ProfileMatcher
 from backend.core.config import PROJECT_ROOT
-from backend.core.orchestrator import run_pipeline
 from backend.models.schemas import MatchScore, UserProfile
 
 
@@ -69,33 +67,3 @@ def match(request: MatchRequest) -> MatchScore:
         )
 
 
-class PipelineRequest(BaseModel):
-    jd_text: str
-    company_name: str
-    website: str
-    profile_id: str
-    instructions: str = ""
-
-
-@router.post("/pipeline")
-def pipeline(request: PipelineRequest) -> dict:
-    state = run_pipeline(
-        jd_text=request.jd_text,
-        company_name=request.company_name,
-        website=request.website,
-        profile_id=request.profile_id,
-        instructions=request.instructions,
-    )
-    return _serialize_state(state)
-
-
-def _serialize_state(state: dict) -> dict:
-    out: dict = {}
-    for key, value in state.items():
-        if value is None:
-            out[key] = None
-        elif isinstance(value, BaseModel):
-            out[key] = json.loads(value.model_dump_json())
-        else:
-            out[key] = value
-    return out

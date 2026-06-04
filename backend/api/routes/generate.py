@@ -12,14 +12,12 @@ from backend.agents.company_researcher import CompanyResearcher
 from backend.agents.cover_letter_generator import CoverLetterGenerator
 from backend.agents.jd_parser import JDParser
 from backend.agents.profile_matcher import ProfileMatcher
-from backend.agents.resume_generator import ResumeGenerator
 from backend.agents.structured_resume_generator import StructuredResumeGenerator
 from backend.core.config import PROJECT_ROOT
 from backend.models.schemas import (
     ApplicationCard,
     StructuredResume,
     TailoredCoverLetter,
-    TailoredResume,
     UserProfile,
 )
 router = APIRouter()
@@ -31,7 +29,6 @@ PROFILE_DIR = PROJECT_ROOT / "data" / "profiles"
 _jd_parser = JDParser()
 _company_researcher = CompanyResearcher()
 _profile_matcher = ProfileMatcher()
-_resume_generator = ResumeGenerator()
 _cover_letter_generator = CoverLetterGenerator()
 _application_card_generator = ApplicationCardGenerator()
 _structured_resume_gen = StructuredResumeGenerator()
@@ -244,14 +241,6 @@ def _prepare_context(req) -> tuple:
             status_code=500, detail=f"Profile matching failed: {exc}"
         )
     return profile, parsed_jd, research, match
-
-
-@router.post("/generate/resume", response_model=TailoredResume)
-def generate_resume(request: GenerateResumeRequest) -> TailoredResume:
-    profile, parsed_jd, research, match = _prepare_context(request)
-    return _resume_generator.generate(
-        profile, parsed_jd, research, match, request.instructions
-    )
 
 
 @router.post("/generate/cover-letter", response_model=TailoredCoverLetter)

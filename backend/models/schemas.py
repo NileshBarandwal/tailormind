@@ -86,22 +86,6 @@ class MatchScore(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
 
 
-class ResumeSection(BaseModel):
-    title: str
-    bullets: list[str] = Field(default_factory=list)
-    order: int = 0
-
-
-class TailoredResume(BaseModel):
-    profile_name: str
-    target_role: str
-    summary: str
-    sections: list[ResumeSection] = Field(default_factory=list)
-    skills_highlighted: list[str] = Field(default_factory=list)
-    jd_keywords_used: list[str] = Field(default_factory=list)
-    generated_at: datetime
-
-
 class TailoredCoverLetter(BaseModel):
     profile_name: str
     target_role: str
@@ -165,7 +149,6 @@ class SavedApplication(BaseModel):
     id: str
     profile_id: str
     job: JobListing
-    resume: TailoredResume | None = None
     cover_letter: TailoredCoverLetter | None = None
     card: ApplicationCard | None = None
     notes: str = ""

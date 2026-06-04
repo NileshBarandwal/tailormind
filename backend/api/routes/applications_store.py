@@ -13,7 +13,6 @@ from backend.models.schemas import (
     JobListing,
     SavedApplication,
     TailoredCoverLetter,
-    TailoredResume,
 )
 
 
@@ -69,7 +68,6 @@ class CreateApplicationRequest(BaseModel):
 class UpdateApplicationRequest(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
-    resume: Optional[TailoredResume] = None
     cover_letter: Optional[TailoredCoverLetter] = None
     card: Optional[ApplicationCard] = None
 

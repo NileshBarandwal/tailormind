@@ -72,22 +72,6 @@ export interface DiscoveredJobs {
   fetched_at: string;
 }
 
-export interface ResumeSection {
-  title: string;
-  bullets: string[];
-  order: number;
-}
-
-export interface TailoredResume {
-  profile_name: string;
-  target_role: string;
-  summary: string;
-  sections: ResumeSection[];
-  skills_highlighted: string[];
-  jd_keywords_used: string[];
-  generated_at: string;
-}
-
 export interface TailoredCoverLetter {
   profile_name: string;
   target_role: string;
@@ -128,7 +112,6 @@ export interface SavedApplication {
   id: string;
   profile_id: string;
   job: JobListing;
-  resume?: TailoredResume;
   cover_letter?: TailoredCoverLetter;
   card?: ApplicationCard;
   notes: string;

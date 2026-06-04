@@ -9,7 +9,6 @@ import type {
   SavedApplication,
   StructuredResume,
   TailoredCoverLetter,
-  TailoredResume,
   UserProfile,
   VersionInsights,
   VersionListItem,
@@ -99,25 +98,6 @@ export function discoverCompanyRoles(
       profile_id: profileId,
       company_name: companyName,
       website,
-    }),
-  });
-}
-
-export function generateResume(
-  profileId: string,
-  jdText: string,
-  companyName: string,
-  website: string,
-  instructions: string,
-): Promise<TailoredResume> {
-  return apiFetch<TailoredResume>("/generate/resume", {
-    method: "POST",
-    body: JSON.stringify({
-      profile_id: profileId,
-      jd_text: jdText,
-      company_name: companyName,
-      website,
-      instructions,
     }),
   });
 }

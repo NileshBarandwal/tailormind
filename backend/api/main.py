@@ -46,10 +46,9 @@ def health() -> dict:
             "jd_parser",
             "company_researcher",
             "profile_matcher",
-            "resume_generator",
             "cover_letter_generator",
             "job_discovery",
             "application_card_generator",
         ],
-        "endpoints": 16,
+        "endpoints": 32,
     }
