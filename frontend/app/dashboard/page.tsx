@@ -12,7 +12,6 @@ import type {
   SavedApplication,
   StructuredResume,
   TailoredCoverLetter,
-  TailoredResume,
   UserProfile,
 } from "@/types";
 import {
@@ -21,10 +20,8 @@ import {
   discoverCompanyRoles,
   discoverJobs,
   exportCoverLetter,
-  exportResume,
   generateApplicationCard,
   generateCoverLetter,
-  generateResume,
   generateStructuredResumeStream,
   getProfile,
   listApplications,
@@ -51,7 +48,6 @@ import GenerationProgress, {
   type ProgressStep,
 } from "@/components/GenerationProgress";
 import { classifyError } from "@/lib/errorMessage";
-import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 import ResumeVersionHistory from "@/components/ResumeVersionHistory";
 import {
@@ -140,16 +136,13 @@ export default function DashboardPage() {
     prevCompiledRef.current = compiledInstructions;
   }, [compiledInstructions]);
 
-  const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
   const [card, setCard] = useState<ApplicationCard | null>(null);
   const [matchScore, setMatchScore] = useState<MatchScore | null>(null);
 
-  const [resumeLoading, setResumeLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
 
-  const [resumeError, setResumeError] = useState("");
   const [coverLetterError, setCoverLetterError] = useState("");
   const [cardError, setCardError] = useState("");
 
@@ -181,9 +174,7 @@ export default function DashboardPage() {
     })),
   );
 
-  const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
-  const [resumeExportMsg, setResumeExportMsg] = useState<string>();
   const [letterExportMsg, setLetterExportMsg] = useState<string>();
 
   const [matchOpen, setMatchOpen] = useState(false);
@@ -283,13 +274,10 @@ export default function DashboardPage() {
       setCompanySearchUrl("");
     }
     setJobUrl(job.url);
-    setResume(null);
     setCoverLetter(null);
     setCard(null);
     setMatchScore(null);
-    setResumeExportMsg(undefined);
     setLetterExportMsg(undefined);
-    setResumeError("");
     setCoverLetterError("");
     setCardError("");
     setStructuredResume(null);
@@ -369,27 +357,6 @@ export default function DashboardPage() {
       setDiscoverError(e instanceof Error ? e.message : "Discover failed");
     } finally {
       setDiscovering(false);
-    }
-  }
-
-  async function handleGenerateResume() {
-    if (!selectedJob) return;
-    setResumeLoading(true);
-    setResumeError("");
-    try {
-      const r = await generateResume(
-        PROFILE_ID,
-        buildJdText(),
-        companyName,
-        website,
-        compiledInstructions,
-      );
-      setResume(r);
-      refreshMatchScore();
-    } catch (e) {
-      setResumeError(e instanceof Error ? e.message : "Generation failed");
-    } finally {
-      setResumeLoading(false);
     }
   }
 
@@ -538,25 +505,6 @@ export default function DashboardPage() {
       additional: additionalInstructions,
       customEmphasis,
     });
-  }
-
-  async function handleExportResume() {
-    setExportingResume(true);
-    setResumeExportMsg(undefined);
-    try {
-      const out = await exportResume(
-        PROFILE_ID,
-        buildJdText(),
-        companyName,
-        website,
-        compiledInstructions,
-      );
-      setResumeExportMsg(`Saved to ${out.filename}`);
-    } catch (e) {
-      setResumeExportMsg(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setExportingResume(false);
-    }
   }
 
   async function handleExportCoverLetter() {
@@ -1086,32 +1034,6 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <button
                 type="button"
-                onClick={handleGenerateResume}
-                disabled={!canGenerate || resumeLoading}
-                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {resumeLoading ? "Generating..." : "Generate Resume"}
-              </button>
-              {resumeError && (() => {
-                const ei = classifyError(resumeError);
-                return (
-                  <div className="mt-1 text-xs">
-                    <span className="text-red-600">{ei.message} {ei.hint}</span>
-                    {ei.canRetry && (
-                      <button
-                        onClick={handleGenerateResume}
-                        className="ml-2 text-red-600 underline font-medium"
-                      >
-                        Try again
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-            <div className="space-y-1">
-              <button
-                type="button"
                 onClick={handleGenerateCoverLetter}
                 disabled={!canGenerate || letterLoading}
                 className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
@@ -1182,14 +1104,6 @@ export default function DashboardPage() {
           )}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {resume && (
-              <ResumePreview
-                resume={resume}
-                onExport={handleExportResume}
-                exporting={exportingResume}
-                exportResult={resumeExportMsg}
-              />
-            )}
             {coverLetter && (
               <CoverLetterPreview
                 letter={coverLetter}
@@ -1272,7 +1186,11 @@ export default function DashboardPage() {
                   WYSIWYG
                 </span>
               </div>
-              <StructuredResumePreview resume={structuredResume} />
+              <StructuredResumePreview
+                resume={structuredResume}
+                matchedSkills={matchScore?.matched_skills}
+                missingSkills={matchScore?.missing_skills}
+              />
             </div>
           )}
 

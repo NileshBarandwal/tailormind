@@ -9,6 +9,8 @@ import { lsGet, lsSet, GLOBAL_KEYS } from "@/lib/persistence";
 
 interface Props {
   resume: StructuredResume;
+  matchedSkills?: string[];
+  missingSkills?: string[];
 }
 
 function escTex(s: string): string {
@@ -271,7 +273,11 @@ export function generateLatex(resume: StructuredResume): string {
   return lines.join("\n");
 }
 
-export default function StructuredResumePreview({ resume }: Props) {
+export default function StructuredResumePreview({
+  resume,
+  matchedSkills,
+  missingSkills,
+}: Props) {
   const printRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "latex">(
     () => (lsGet<string>(GLOBAL_KEYS.previewTab) as "preview" | "latex") ?? "preview"
@@ -401,6 +407,72 @@ export default function StructuredResumePreview({ resume }: Props) {
           </div>
         </div>
       </div>
+
+      {/* JD keyword visibility — no-print, not part of resume document */}
+      {(resume.jd_keywords_used.length > 0 ||
+        (matchedSkills?.length ?? 0) > 0) && (
+        <div
+          className="no-print"
+          style={{
+            marginBottom: 10,
+            padding: "8px 0",
+            borderBottom: "1px solid #f1f5f9",
+          }}
+        >
+          {resume.jd_keywords_used.length > 0 && (
+            <div style={{ marginBottom: 4 }}>
+              <span
+                style={{ fontSize: 11, color: "#64748b", marginRight: 6 }}
+              >
+                Matched JD keywords:
+              </span>
+              {resume.jd_keywords_used.map((k) => (
+                <span
+                  key={k}
+                  style={{
+                    display: "inline-block",
+                    margin: "2px 3px",
+                    padding: "2px 8px",
+                    borderRadius: 10,
+                    fontSize: 11,
+                    background: "#f0fdf4",
+                    color: "#15803d",
+                    border: "1px solid #bbf7d0",
+                  }}
+                >
+                  {k}
+                </span>
+              ))}
+            </div>
+          )}
+          {(missingSkills?.length ?? 0) > 0 && (
+            <div>
+              <span
+                style={{ fontSize: 11, color: "#64748b", marginRight: 6 }}
+              >
+                JD keywords not highlighted:
+              </span>
+              {missingSkills!.map((k) => (
+                <span
+                  key={k}
+                  style={{
+                    display: "inline-block",
+                    margin: "2px 3px",
+                    padding: "2px 8px",
+                    borderRadius: 10,
+                    fontSize: 11,
+                    background: "#fafafa",
+                    color: "#94a3b8",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  {k}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === "preview" && (
       <div id="resume-print-root">

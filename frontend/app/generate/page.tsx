@@ -5,14 +5,11 @@ import type {
   ApplicationCard,
   StructuredResume,
   TailoredCoverLetter,
-  TailoredResume,
 } from "@/types";
 import {
   exportCoverLetter,
-  exportResume,
   generateApplicationCard,
   generateCoverLetter,
-  generateResume,
   generateStructuredResumeStream,
   type GenerationEvent,
 } from "@/lib/api";
@@ -28,7 +25,6 @@ import GenerationProgress, {
   type ProgressStep,
 } from "@/components/GenerationProgress";
 import { classifyError } from "@/lib/errorMessage";
-import ResumePreview from "@/components/ResumePreview";
 import StructuredResumePreview from "@/components/StructuredResumePreview";
 import { getActiveProfileId } from "@/lib/persistence";
 import {
@@ -60,14 +56,11 @@ export default function GeneratePage() {
     customEmphasis,
   );
 
-  const [resume, setResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<TailoredCoverLetter | null>(null);
   const [card, setCard] = useState<ApplicationCard | null>(null);
 
-  const [resumeLoading, setResumeLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
-  const [resumeError, setResumeError] = useState("");
   const [coverLetterError, setCoverLetterError] = useState("");
   const [cardError, setCardError] = useState("");
 
@@ -92,9 +85,7 @@ export default function GeneratePage() {
     })),
   );
 
-  const [exportingResume, setExportingResume] = useState(false);
   const [exportingLetter, setExportingLetter] = useState(false);
-  const [resumeExportMsg, setResumeExportMsg] = useState<string>();
   const [letterExportMsg, setLetterExportMsg] = useState<string>();
 
   const canGenerate =
@@ -153,20 +144,6 @@ export default function GeneratePage() {
       additional: additionalInstructions,
       customEmphasis,
     });
-  }
-
-  async function handleGenerateResume() {
-    setResumeLoading(true);
-    setResumeError("");
-    try {
-      setResume(
-        await generateResume(PROFILE_ID, jdText, companyName, website, compiledInstructions),
-      );
-    } catch (e) {
-      setResumeError(e instanceof Error ? e.message : "Generation failed");
-    } finally {
-      setResumeLoading(false);
-    }
   }
 
   async function handleGenerateCoverLetter() {
@@ -281,25 +258,6 @@ export default function GeneratePage() {
       );
     } finally {
       setStructuredLoading(false);
-    }
-  }
-
-  async function handleExportResume() {
-    setExportingResume(true);
-    setResumeExportMsg(undefined);
-    try {
-      const out = await exportResume(
-        PROFILE_ID,
-        jdText,
-        companyName,
-        website,
-        compiledInstructions,
-      );
-      setResumeExportMsg(`Saved to ${out.filename}`);
-    } catch (e) {
-      setResumeExportMsg(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setExportingResume(false);
     }
   }
 
@@ -498,32 +456,6 @@ export default function GeneratePage() {
           <div className="space-y-1">
             <button
               type="button"
-              onClick={handleGenerateResume}
-              disabled={!canGenerate || resumeLoading}
-              className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {resumeLoading ? "Generating..." : "Generate Resume"}
-            </button>
-            {resumeError && (() => {
-              const ei = classifyError(resumeError);
-              return (
-                <div className="mt-1 text-xs">
-                  <span className="text-red-600">{ei.message} {ei.hint}</span>
-                  {ei.canRetry && (
-                    <button
-                      onClick={handleGenerateResume}
-                      className="ml-2 text-red-600 underline font-medium"
-                    >
-                      Try again
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-          <div className="space-y-1">
-            <button
-              type="button"
               onClick={handleGenerateCoverLetter}
               disabled={!canGenerate || letterLoading}
               className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
@@ -577,14 +509,6 @@ export default function GeneratePage() {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {resume && (
-          <ResumePreview
-            resume={resume}
-            onExport={handleExportResume}
-            exporting={exportingResume}
-            exportResult={resumeExportMsg}
-          />
-        )}
         {coverLetter && (
           <CoverLetterPreview
             letter={coverLetter}
