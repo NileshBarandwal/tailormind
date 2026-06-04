@@ -19,7 +19,6 @@ import {
   deleteApplication,
   discoverCompanyRoles,
   discoverJobs,
-  exportCoverLetter,
   generateApplicationCard,
   generateCoverLetter,
   generateStructuredResumeStream,
@@ -174,8 +173,6 @@ export default function DashboardPage() {
     })),
   );
 
-  const [exportingLetter, setExportingLetter] = useState(false);
-  const [letterExportMsg, setLetterExportMsg] = useState<string>();
 
   const [matchOpen, setMatchOpen] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
@@ -277,7 +274,6 @@ export default function DashboardPage() {
     setCoverLetter(null);
     setCard(null);
     setMatchScore(null);
-    setLetterExportMsg(undefined);
     setCoverLetterError("");
     setCardError("");
     setStructuredResume(null);
@@ -505,25 +501,6 @@ export default function DashboardPage() {
       additional: additionalInstructions,
       customEmphasis,
     });
-  }
-
-  async function handleExportCoverLetter() {
-    setExportingLetter(true);
-    setLetterExportMsg(undefined);
-    try {
-      const out = await exportCoverLetter(
-        PROFILE_ID,
-        buildJdText(),
-        companyName,
-        website,
-        compiledInstructions,
-      );
-      setLetterExportMsg(`Saved to ${out.filename}`);
-    } catch (e) {
-      setLetterExportMsg(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setExportingLetter(false);
-    }
   }
 
   async function handleSaveApplication() {
@@ -1105,12 +1082,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             {coverLetter && (
-              <CoverLetterPreview
-                letter={coverLetter}
-                onExport={handleExportCoverLetter}
-                exporting={exportingLetter}
-                exportResult={letterExportMsg}
-              />
+              <CoverLetterPreview letter={coverLetter} />
             )}
           </div>
 

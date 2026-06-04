@@ -257,44 +257,6 @@ export function generateApplicationCard(
   });
 }
 
-export function exportResume(
-  profileId: string,
-  jdText: string,
-  companyName: string,
-  website: string,
-  instructions: string,
-): Promise<{ pdf_path: string; filename: string }> {
-  return apiFetch("/export/resume", {
-    method: "POST",
-    body: JSON.stringify({
-      profile_id: profileId,
-      jd_text: jdText,
-      company_name: companyName,
-      website,
-      instructions,
-    }),
-  });
-}
-
-export function exportCoverLetter(
-  profileId: string,
-  jdText: string,
-  companyName: string,
-  website: string,
-  instructions: string,
-): Promise<{ pdf_path: string; filename: string }> {
-  return apiFetch("/export/cover-letter", {
-    method: "POST",
-    body: JSON.stringify({
-      profile_id: profileId,
-      jd_text: jdText,
-      company_name: companyName,
-      website,
-      instructions,
-    }),
-  });
-}
-
 export function getInstructions(profileId: string): Promise<InstructionSet> {
   return apiFetch<InstructionSet>(`/instructions/${profileId}`);
 }

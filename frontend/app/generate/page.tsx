@@ -7,7 +7,6 @@ import type {
   TailoredCoverLetter,
 } from "@/types";
 import {
-  exportCoverLetter,
   generateApplicationCard,
   generateCoverLetter,
   generateStructuredResumeStream,
@@ -85,8 +84,6 @@ export default function GeneratePage() {
     })),
   );
 
-  const [exportingLetter, setExportingLetter] = useState(false);
-  const [letterExportMsg, setLetterExportMsg] = useState<string>();
 
   const canGenerate =
     jdText.trim().length >= 50 && companyName.trim() && website.trim();
@@ -258,25 +255,6 @@ export default function GeneratePage() {
       );
     } finally {
       setStructuredLoading(false);
-    }
-  }
-
-  async function handleExportCoverLetter() {
-    setExportingLetter(true);
-    setLetterExportMsg(undefined);
-    try {
-      const out = await exportCoverLetter(
-        PROFILE_ID,
-        jdText,
-        companyName,
-        website,
-        compiledInstructions,
-      );
-      setLetterExportMsg(`Saved to ${out.filename}`);
-    } catch (e) {
-      setLetterExportMsg(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setExportingLetter(false);
     }
   }
 
@@ -510,12 +488,7 @@ export default function GeneratePage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {coverLetter && (
-          <CoverLetterPreview
-            letter={coverLetter}
-            onExport={handleExportCoverLetter}
-            exporting={exportingLetter}
-            exportResult={letterExportMsg}
-          />
+          <CoverLetterPreview letter={coverLetter} />
         )}
       </div>
 
