@@ -8,7 +8,7 @@ function isBrowser(): boolean {
 export function jobKey(url: string): string {
   if (!url) return "no_url";
   try {
-    return btoa(url).replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
+    return btoa(url).replace(/[^a-zA-Z0-9]/g, "");
   } catch {
     return "invalid_url";
   }
