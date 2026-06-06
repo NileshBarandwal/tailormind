@@ -19,7 +19,7 @@ TailorMind helps you discover jobs, generate fact-grounded tailored resumes, tra
 
 ## Why I Built This
 
-Job seekers repeatedly rewrite the same resume, track multiple versions manually across spreadsheets, and forget which resume was submitted to which company. After observing this pattern, I wanted to build a workflow-centric system — not just a resume generator — that combines intelligent resume tailoring, version tracking, and application outcome insights in one place. The goal was to take per-application prep from two hours to under five minutes, without auto-applying on my behalf.
+Job seekers repeatedly rewrite the same resume, track multiple versions manually across spreadsheets, and forget which resume was submitted to which company. After observing this pattern, I wanted to build a workflow-centric system, not just a resume generator. It combines intelligent resume tailoring, version tracking, and application outcome insights in one place. The goal was to take per-application prep from two hours to under five minutes, without auto-applying on my behalf.
 
 ---
 
@@ -71,25 +71,25 @@ View insights: applied rate, interview rate, top projects
 ## Features
 
 ### Resume Intelligence
-- **Fact-grounded Structured Resume generation** — two-step pipeline: selects the most relevant content for the role, then rewrites it. No invented tools, metrics, or context.
-- **Tailoring preferences and ATS optimization** — chip UI (Emphasize backend, Prioritize AI, Keep concise, Strong ATS optimization, etc.) compiles into instructions for the generation pipeline
-- **JD keyword coverage visibility** — shows which JD keywords appear in the resume and which are missing
-- **PDF and LaTeX export** — browser print-to-PDF from the WYSIWYG preview, or one-click export to Overleaf for publication-grade output
+- **Fact-grounded Structured Resume generation**: two-step pipeline: selects the most relevant content for the role, then rewrites it. No invented tools, metrics, or context.
+- **Tailoring preferences and ATS optimization**: chip UI (Emphasize backend, Prioritize AI, Keep concise, Strong ATS optimization, etc.) compiles into instructions for the generation pipeline
+- **JD keyword coverage visibility**: shows which JD keywords appear in the resume and which are missing
+- **PDF and LaTeX export**: browser print-to-PDF from the WYSIWYG preview, or one-click export to Overleaf for publication-grade output
 
 ### Application Tracking
-- **Resume versioning** — every generation auto-saves an immutable snapshot. Multiple versions per job, tracked separately.
-- **Outcome tracking** — mark versions as Applied → Interview → Rejected → Offer
-- **Notes and restore** — record why you regenerated, restore any version as a working draft
-- **Insights** — applied rate, interview rate, and top-performing projects across all applications
+- **Resume versioning**: every generation auto-saves an immutable snapshot. Multiple versions per job, tracked separately.
+- **Outcome tracking**: mark versions as Applied → Interview → Rejected → Offer
+- **Notes and restore**: record why you regenerated, restore any version as a working draft
+- **Insights**: applied rate, interview rate, and top-performing projects across all applications
 
 ### Profile Management
-- **Knowledge pool editing** — edit Work Experience, Projects, Academic Projects, Education, and Skills directly in the UI. No JSON files.
-- **Pool-format architecture** — profile edits affect future generations only. Existing version snapshots remain reproducible.
+- **Knowledge pool editing**: edit Work Experience, Projects, Academic Projects, Education, and Skills directly in the UI. No JSON files.
+- **Pool-format architecture**: profile edits affect future generations only. Existing version snapshots remain reproducible.
 
 ### Job Discovery
-- **Adzuna and Remotive integration** — real job listings by role and location
-- **Match scoring** — honest fit score across skills, experience, and education with matched/missing skills breakdown
-- **Role presets** — quick-select common engineering roles
+- **Adzuna and Remotive integration**: real job listings by role and location
+- **Match scoring**: honest fit score across skills, experience, and education with matched/missing skills breakdown
+- **Role presets**: quick-select common engineering roles
 
 ---
 
@@ -102,21 +102,21 @@ Profile Pool
 (work_experience, projects, academic_projects, skills)
         ↓
 Step 1: Selection Agent
-  — reads JD requirements against full profile pool
-  — selects the most relevant items for this specific role
-  — enforces bullet budget per section
+  - reads JD requirements against full profile pool
+  - selects the most relevant items for this specific role
+  - enforces bullet budget per section
         ↓
 Step 2: Fact-Grounded Rewrite Agent
-  — rewrites selected bullets to reframe emphasis for the role
-  — strict rules: no invented tools, metrics, or context
-  — tailoring preferences applied here
+  - rewrites selected bullets to reframe emphasis for the role
+  - strict rules: no invented tools, metrics, or context
+  - tailoring preferences applied here
         ↓
 StructuredResume JSON  (immutable snapshot, source of truth)
   ├── HTML renderer  →  WYSIWYG preview + browser PDF
   └── LaTeX renderer →  Overleaf export
 ```
 
-Version safety: the StructuredResume snapshot is stored at generation time. Editing your profile or preferences affects future generations only — old versions always reproduce from their stored snapshot.
+Version safety: the StructuredResume snapshot is stored at generation time. Editing your profile or preferences affects future generations only. Old versions always reproduce from their stored snapshot.
 
 ---
 
@@ -128,19 +128,19 @@ Frontend (Next.js 14 + TypeScript)
 Backend (FastAPI)
         ↓
 Agents
-  ├── JDParser                     — extracts requirements from JD text
-  ├── CompanyResearcher            — scrapes and summarizes company context
-  ├── ProfileMatcher               — scores profile against JD
-  ├── StructuredResumeGenerator    — two-step selection + rewrite
+  ├── JDParser                     # extracts requirements from JD text
+  ├── CompanyResearcher            # scrapes and summarizes company context
+  ├── ProfileMatcher               # scores profile against JD
+  ├── StructuredResumeGenerator    # two-step selection + rewrite
   ├── CoverLetterGenerator
   ├── ApplicationCardGenerator
-  └── JobDiscovery                 — Adzuna + Remotive APIs
+  └── JobDiscovery                 # Adzuna + Remotive APIs
         ↓
 Storage
-  ├── ChromaDB            — vector store for company research (SHA-256 chunk integrity)
-  ├── data/profiles/      — pool-format JSON per user
-  ├── data/versions/      — immutable resume version snapshots
-  └── data/applications/  — saved application records
+  ├── ChromaDB            # vector store for company research (SHA-256 chunk integrity)
+  ├── data/profiles/      # pool-format JSON per user
+  ├── data/versions/      # immutable resume version snapshots
+  └── data/applications/  # saved application records
 ```
 
 **Model stack:**
@@ -203,7 +203,7 @@ uvicorn backend.api.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
-Open `http://localhost:3000` — first visit redirects to onboarding.
+Open `http://localhost:3000`. First visit redirects to onboarding.
 
 ### 5. Tests
 
@@ -235,9 +235,9 @@ python -m pytest backend/tests/ -v -m "not live"
 | `GOOGLE_API_KEY` | Yes |
 | `ADZUNA_APP_ID` | Yes |
 | `ADZUNA_APP_KEY` | Yes |
-| `ALLOWED_ORIGINS` | Yes — your Vercel URL |
-| `OPENROUTER_API_KEY` | No — fallback only |
-| `SUPABASE_DB_URL` | No — audit logging only |
+| `ALLOWED_ORIGINS` | Yes: your Vercel URL |
+| `OPENROUTER_API_KEY` | No: fallback only |
+| `SUPABASE_DB_URL` | No: audit logging only |
 
 > **Free tier note:** Render free instances sleep after 15 minutes of inactivity. The frontend pings `/health` every 4 minutes during active sessions. For always-on uptime, add an external monitor (e.g. UptimeRobot) pinging `/health` every 5 minutes.
 
@@ -274,34 +274,34 @@ backend/
     application_card_generator.py
     job_discovery.py
   api/routes/
-    generate.py          — structured resume stream, cover letter, card
-    profile.py           — pool GET/PATCH
-    versions.py          — versioning, outcome tracking, insights
+    generate.py          # structured resume stream, cover letter, card
+    profile.py           # pool GET/PATCH
+    versions.py          # versioning, outcome tracking, insights
     applications_store.py
-    applications.py      — match scoring
+    applications.py      # match scoring
     jobs.py
     instructions.py
   core/
-    model_router.py      — LiteLLM + fallback chain
-    vector_store.py      — ChromaDB + SHA-256
+    model_router.py      # LiteLLM + fallback chain
+    vector_store.py      # ChromaDB + SHA-256
   models/schemas.py
 
 frontend/
   app/
-    dashboard/           — discovery + generation + version history
-    generate/            — manual JD paste flow
-    profile/             — knowledge pool editing
+    dashboard/           # discovery + generation + version history
+    generate/            # manual JD paste flow
+    profile/             # knowledge pool editing
     instructions/
     onboarding/
   components/
-    StructuredResumePreview.tsx   — HTML preview + LaTeX + PDF export
-    ResumeVersionHistory.tsx      — versions, outcomes, notes, insights
+    StructuredResumePreview.tsx   # HTML preview + LaTeX + PDF export
+    ResumeVersionHistory.tsx      # versions, outcomes, notes, insights
     GenerationProgress.tsx
-    profile/                      — 7 section components
+    profile/                      # 7 section components
   lib/
     api.ts
-    persistence.ts       — localStorage helpers + jobKey
-    tailoring.ts         — chip definitions + compose function
+    persistence.ts       # localStorage helpers + jobKey
+    tailoring.ts         # chip definitions + compose function
     errorMessage.ts
 ```
 
@@ -309,11 +309,11 @@ frontend/
 
 ## Known Limitations
 
-- **Single-user** — no authentication or multi-user support. Profile data is stored on the server filesystem.
-- **localStorage session state** — generated resumes persist per job URL in the browser. Clearing localStorage resets the cache (version history on the server is unaffected).
-- **Render free tier cold starts** — backend may take 30–60 seconds to wake from sleep on first request.
-- **No auto-apply** — TailorMind generates application materials but does not submit applications. Intentional.
-- **Job discovery scope** — currently limited to Adzuna (India) and Remotive (remote).
+- **Single-user**: no authentication or multi-user support. Profile data is stored on the server filesystem.
+- **localStorage session state**: generated resumes persist per job URL in the browser. Clearing localStorage resets the cache (version history on the server is unaffected).
+- **Render free tier cold starts**: backend may take 30–60 seconds to wake from sleep on first request.
+- **No auto-apply**: TailorMind generates application materials but does not submit applications. Intentional.
+- **Job discovery scope**: currently limited to Adzuna (India) and Remotive (remote).
 
 ---
 
@@ -342,4 +342,4 @@ frontend/
 
 ---
 
-*Built by [Nilesh Rohidas Barandwal](https://github.com/NileshBarandwal) — M.Tech CSE, IIT Dharwad*
+*Built by [Nilesh Rohidas Barandwal](https://github.com/NileshBarandwal), M.Tech CSE, IIT Dharwad*
